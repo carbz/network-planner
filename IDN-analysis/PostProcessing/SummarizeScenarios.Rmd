@@ -1,0 +1,507 @@
+# Eastern Indonesia Energy Access Scale-up
+## Analysis Around the Geospatial Planning 
+
+========================================================
+
+Kicked off by a January 2013 workshop, the consultant consortium working towards the Indonesia Energy Access Scale-Up Project identified several key inputs of planning level detail to develop a geospatially-based least cost electrification plan.  This effort identified essential nationally-produced input data sources to develop a well-informed plan.  Components used in this analysis include:
+* 1.  BIG Land-Use Classification Maps indicating specfic settlement areas
+* 2.	BPS Census information including Desa-level information on population, households and current electricity connections (dated 2010)
+* 3.	PLN provided cost-data and historical consumptions rates
+* 4.	PLN gathered and digitized Medium Voltage powerline data
+
+Sample Data can be downloaded from dropbox:
+https://www.dropbox.com/sh/6i6r46a3czjd244/gF_kE4gixe
+
+```{r Load Libraries and NP data, message = F, cache=T}
+
+require(gdata)
+require(plyr)
+require(stringr)
+require(data.table)
+require(ggplot2)
+require(grid)
+require(maptools)
+require(stats)
+require(ggmap)
+require(WriteXLS)
+
+source('~/github/local/network-planner/IDN-analysis/PostProcessing/interpret_commonfunctions.R')
+
+##Jonathan's directory
+setwd("~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/February-2014/")
+
+path_name <- "~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/February-2014/"
+#path_name <- "~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/January-2014/"
+
+directory_names <- c("65-FloresBarat-MV5",
+                     "64-FloresTimor-MV5",
+                     "63-SumbaArea-MV5",
+                     "59-KupanArea-MV5",
+                     "62-TernateArea-MV5",
+                     "61-TualArea-MV5",
+                     "60-AmbonArea-MV5",
+                     "85-Ternate-BufferedPop/"
+                     )
+
+i=
+
+directory_name <- paste0(path_name, directory_names[i])
+#directory_name <- "~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/January-2014/564-MalukuUtara-900HHD/"
+
+# #Import metrics local for each island areas in the analysis
+# #metrics local is the key output file of each Network Planner scenario capturing nodal level information
+local <- read.csv(paste0(directory_name,"/metrics-local.csv"), skip=1, stringsAsFactors=F)
+local$settlement_id <- rownames(local)
+
+proj4 <- read.csv(paste0(directory_name,"/metrics-local.csv"), nrows=1, header = FALSE)
+
+## Import proposed networks for interpeting new network, this is the NP minimum spanning tree
+##Prabhas' function imports both shapefile line  types in one go and merges them, useful...
+grid_lines <- load.polylines(directory_name)
+
+# #Import Metrics Gloabl stuff too, 
+global <- load.global(read.csv(paste0(directory_name,"/metrics-global.csv"),stringsAsFactors=F))
+
+
+# #DESA POLYGONS
+# #Now, let's incorporate some polygon shapefile polygons for background and references 
+if (i <=4) {
+  # #NTT Polygons: LOAD TIME ~3:55
+  ntt_polygon <- readShapePoly("~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPinputs/Dec2013-Preprocessing/Shapefiles/NTT_with_Census_Data_+_PLN_Areas.shp")
+  # #now let's make it more ggplottable and keep any attribute data 
+  ntt_polygon@data$id <- rownames(ntt_polygon@data)
+  ntt_polygon <- merge(ntt_polygon@data, fortify(ntt_polygon), by = 'id')
+  polygon <- ntt_polygon
+  }else if (i==5){
+    # #Maluku Utara Polygons
+    malukuutara_polygon <- readShapePoly("~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPinputs/Dec2013-Preprocessing/Shapefiles/Maluku_Utara_with_Census_Data_+_PLN_Areas.shp")
+    #now let's make it more ggplottable and keep any attribute data 
+    malukuutara_polygon@data$id <- rownames(malukuutara_polygon@data)
+    malukuutara_polygon <- merge(malukuutara_polygon@data, fortify(malukuutara_polygon), by = 'id')
+    polygon<- malukuutara_polygon
+    } else {
+      #Maluku Polygons 
+      maluku_polygon <- readShapePoly("~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPinputs/Dec2013-Preprocessing/Shapefiles/Maluku_with_Census_Data_+_PLN_Areas.shp")
+      #now let's make it more ggplottable and keep any attribute data 
+      maluku_polygon@data$id <- rownames(maluku_polygon@data)
+      maluku_polygon <- merge(maluku_polygon@data, fortify(maluku_polygon), by = 'id')
+      polygon <- maluku_polygon
+      }
+
+
+#Define more useful population catgories for project area polygons
+polygon <- popbins(polygon)
+
+### ~~~~~~~~~~~~~~DATA LOADED!~~~~~~~~~~~~~~~~~~~~~~~####
+```
+
+# Plotting Maps
+
+There are some useful maps we commonly generate.  Let's try to automate and streamline that here. 
+
+````{r Plot Simple Maps, message = F, cache=T}
+
+
+##Maluku Utara - all bells and whistles.  This is a comprehensive plot of information for which we can subtract/add more information in the future.
+#Thanks @prabhasp!
+
+
+#and the plot with multi-level data identified in a 'generic' function
+comprehensive_plot <- function(polygon, path, points) {
+  
+  ggplot() + 
+    geom_polygon(data = polygon, aes(x=long,y=lat, group=group, fill=PopulationBin), alpha=0.5) +
+    scale_fill_brewer(type="seq", palette="YlOrBr") +
+    geom_path(data=path, 
+              aes(x=long, y=lat, group=group, linetype=MVLineType), color='black') + 
+      scale_size_manual(values=c(.5,1.5)) + 
+      scale_linetype_manual(values=c("solid", "dotdash")) + 
+    geom_point(data=points, aes(x = X, y = Y, colour = Metric...System, shape = Xy_source)) +
+      scale_shape_manual(values=c(20, 11), labels=c("BIG", "BPS")) +
+      scale_color_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Unelectrified")) + 
+    labs(title = paste0("NetworkPlanner Outputs: ",directory_names[i]), x = "Longitude", y="Latitude", color = "Electrification Tech.", shape = "Settlement Data Source") +
+    coord_equal(xlim=c(min(points$X),max(points$X)),ylim=c(min(points$Y),max(points$Y)))
+  
+  }
+
+google_earth_plot <- function(path, points) {
+  
+  ##This returns the left/bottom/right/top bounding box points 
+  #of a given X, Y point set
+  #names(location) <- c("left","bottom","right","top")
+  loc <- c(min(points$X)-1, #left 
+           min(points$Y)-1, #bottom
+           max(points$X)+1, #right
+           max(points$Y)+1) #top
+  map <- get_map(location= loc)
+  
+  p<- ggmap(map, legend = "topleft") + 
+      geom_path(data=path, 
+              aes(x=long, y=lat, group=group, linetype=MVLineType), color='black') + 
+      scale_size_manual(values=c(.5,1.5)) + 
+      scale_linetype_manual(values=c("solid", "dotdash")) + 
+    geom_point(data=points, aes(x = X, y = Y, colour = Metric...System, shape = Xy_source)) +
+      scale_shape_manual(values=c(20, 11), labels=c("BIG", "BPS")) +
+      scale_color_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Unelectrified")) + 
+    labs(title = paste0("NetworkPlanner Outputs: ",directory_names[i]), x = "Longitude", y="Latitude", color = "Electrification Tech.", shape = "Settlement Data Source") +
+    coord_equal(xlim=c(min(points$X),max(points$X)),ylim=c(min(points$Y),max(points$Y)))
+  
+  return(p)
+  }
+
+
+#Also establish a blank_theme template from Prabhas' recommendations 
+blank_theme <- function() {
+  theme(#axis.text=element_blank(), axis.title=element_blank(), 
+        axis.ticks=element_blank(),
+        panel.grid=element_blank(),
+        panel.background=element_blank())
+  }
+
+#Explicitly define the plot regions of interest based on NP outputs and BPS Polygon data
+big_picture_plot <- comprehensive_plot(polygon, grid_lines, local) + blank_theme() 
+
+#Aspect Ratio: height to width
+aspect_ratio <- (max(local$Y)-min(local$Y))/(max(local$X)-min(local$X))
+width <- 1500 #desired pixel width of image outputs
+
+# #Output Map png
+# png(filename=paste0(directory_name,"/Output-Overview-Map.png"), width = width, height=width*aspect_ratio)
+# plot(big_picture_plot)
+# dev.off()
+# 
+# jpeg(filename=paste0(directory_name,"/Output-Overview-Map.jpeg"), width = width, height=width*aspect_ratio, quality = 100)
+# plot(big_picture_plot)
+# dev.off()
+##My favorite plot
+tiff(filename=paste0(directory_name,"/Output-Overview-Map.tiff"), width = width, height=width*aspect_ratio)
+plot(big_picture_plot)
+dev.off()
+
+
+#Develop map with Google Background for better reference
+proposed_GE_background <- google_earth_plot(grid_lines, local)
+
+#Sample Plots
+big_picture_plot
+proposed_GE_background
+##My favorite plot
+tiff(filename=paste0(directory_name,"/Output-Overview-Map-GEbackground.tiff"), width = width, height=width*aspect_ratio)
+plot(proposed_GE_background)
+dev.off()
+
+```
+
+# Summarize NP Output Data
+
+Here, we interpret basic consequence of the suggested network and try to express some useful metrics. 
+
+
+````{r Useful Tabular Summaries, message = F, cache=T}
+
+
+#Summarize outputs by technology type (ie Off-Grid, Mini-Grid and Grid systems)
+summary <- summarize_metrics_local_MV5(local)
+
+
+local_agg <- summary
+#Determine Existing Grid stastics 
+existing_length <- polyline.length.within(local, directory_name)
+existing_pop <- sum(local$Full_population)
+existing_houses <- sum((local$Full_population-local$Pop)/local$Ho_size)
+
+
+#Grid Summary
+grid<-grid.summary.corrected.existing(summary, global, existing_length, existing_houses)
+mg <- mini.grid.summary.MV5(local_agg)
+og <- off.grid.summary(local_agg)
+
+options("scipen"=100, "digits"=2)
+
+all_systems_summary <- rbind(grid, mg, og) 
+ WriteXLS("all_systems_summary", str_c(directory_name,
+                                       "/MetricsLocal-MVMax5-SingleSheetSummary.xls"))
+
+
+```
+# Rollout 
+
+If all that stuff works, let's suggest a sequence in which to roll out the construction of grid-nodes.  This has been pre-developed and we're reapplying here 
+
+````{r Rollout Analysis, message = F, cache=F}
+
+source('~/github/local/network-planner/Prioritized/NetworkPlanner_SystemRollout_Greedy.R')
+source('~/github/local/network-planner/Prioritized/Custom_Rollout_Functions.R')
+
+
+##1.0 - Import metrics.local for only grid-proposed nodes -> local.grid
+#already done at the top
+
+proposed <- readShapeLines(paste0(directory_name,"/networks-proposed.shp")) #RUNTIME ~ 00:08 mins
+
+#Process metrics-local to sugggest a rollout sequence
+
+  local$Settlement.id <- rownames(local) #use generic row names for unique ID of each unique settlement point
+  
+  ## ensure FID is unqiue
+  proposed$FID <- row.names(proposed)
+  
+  #Use output of priortized.grid function as input to far-sighted optimized rollout algorithim 
+  #takes a shapefile (network) and csv (nodal descriptions and weights) 
+  #and suggests a sequential, phased roll-out of the system based on a greedy, one step ahead view
+  #***RUNTIME ~08:00***********
+  greedy.grid <- prioritized.grid.greedy(local,proposed,proj4)
+  ##***************************
+  
+  #Explicitly define greedy grid output as a dataframe
+   #Sometimes I need to explicitly call the fataframe for greedy.grid - arghhhh
+  greedy.grid <- as.data.frame(greedy.grid)
+
+if (length(greedy.grid)==2){
+  print("Houston, we have a problem with our dataframe")
+  greedy.grid  <- as.data.frame(greedy.grid[1])
+  }
+
+#Function to determine downstream summations for greedy grid
+  greedy.grid.cummulatives <- downstream.sum.calculator(greedy.grid)
+  
+  #Far Sighted function to improve near-sighted greedy grid
+  #farsighted.grid <- far_sighted_rollout(greedy.grid.cummulatives)
+  
+  ##Phasing, Rollout and Costs
+  
+  ##Edwin likes to keep all the metrics local data together, so reconnect it by unique Name field
+  #mu_ranked <- merge(x=malukuutara, y=greedy.grid.cummulatives, all.x=T, by = "Name")
+  
+  #Order the suggested grid path by optimal sequence
+  #Broken!
+  farsighted.grid <- greedy.grid.cummulatives
+  farsighted.grid$far.sighted.sequence <- farsighted.grid$sequence
+  farsighted.grid <- farsighted.grid[order(farsighted.grid$far.sighted.sequence),]
+
+  #Develop cummulative sum of network length metric
+  farsighted.grid$CummulativeNetworkExtent.m <- cumsum(farsighted.grid$dist)
+  farsighted.grid$CummulativeHousesConnected.qty <- cumsum(farsighted.grid$Demand..household....Target.household.count)
+  
+  #Scalar Values of region before expansion efforts began
+  percent_houses_connected_at_start <- 1-sum(local$Demographics...Projected.household.count)/(sum(local$Full_population/local$Ho_size))
+  houses_connected_at_start <- (sum(local$Full_population/local$Ho_size) - sum(local$Demographics...Projected.household.count))
+  total_houses <- sum(local$Full_population/local$Ho_size)
+  
+  #Track cummulative electrification ratio 
+  farsighted.grid <- mutate(farsighted.grid, PercentElectrification = (houses_connected_at_start + CummulativeHousesConnected.qty)/total_grid_houses )
+
+
+#That lets us develop Phase bins
+farsighted.grid$Phase <- NA
+total_phases <- 5
+phase_increment_house <- sum(farsighted.grid$Demand..household....Target.household.count)
+
+for (i in 1:total_phases){
+  
+  lower_cutoff <- (i-1)/total_phases*phase_increment_house
+  upper_cutoff <- i/total_phases*phase_increment_house
+
+  farsighted.grid$Phase[which((farsighted.grid$CummulativeHousesConnected.qty >= lower_cutoff) &
+                      (farsighted.grid$CummulativeHousesConnected.qty <= upper_cutoff))] <- i
+  
+}
+
+#Ensure Phase is considered a factor
+farsighted.grid$Phase <- as.factor(farsighted.grid$Phase)
+
+#Reverse factor order of phase so color corresponds better 
+farsighted.grid$PhasePlot = factor(farsighted.grid$Phase)
+#farsighted.grid$PhasePlot = factor(farsighted.grid$PhasePlot, levels = rev(farsighted.grid$PhasePlot))
+
+#Now develop ranked plot
+ranked_plot <- function(polygon, farsighted.grid, path){
+  ggplot() + 
+    geom_polygon(data = polygon, aes(x=long,y=lat, group=group, fill=PopulationBin), alpha=0.35) +
+      scale_fill_brewer(type="seq", palette="YlOrBr") +
+     geom_path(data=path, 
+              aes(x=long, y=lat, group=group, linetype=MVLineType), color='black') + 
+      scale_size_manual(values=c(.5,1.5)) + 
+      scale_linetype_manual(values=c("solid", "dotdash")) + 
+    geom_point(data=farsighted.grid, aes(x = long, y = lat, colour = PhasePlot)) +
+      scale_color_brewer(palette="YlGnBu") + 
+    labs(title = "Proposed Grid Rollout", x = "Longitude", y="Latitude", color = "Electrification Sequence") +
+    coord_equal(xlim=c(min(farsighted.grid$long),max(farsighted.grid$long)), 
+                ylim=c(min(farsighted.grid$lat),max(farsighted.grid$lat)))
+  }
+
+rollout_plot <- ranked_plot(polygon, farsighted.grid, grid_lines) + blank_theme()
+
+rollout_plot 
+
+#Output Map png
+tiff(filename=paste0(directory_name,"/Rollout-Overview-Map.tiff"), width = width, height=width*aspect_ratio)
+plot(rollout_plot)
+dev.off()
+
+
+```
+
+# Binning Categories
+
+It can be useful to sort the NP results of settlement data by bins.  Ex, phases for construction, technology by settlement size, cost buckets, etc. 
+
+````{r Developing Bins of Resulting Network, message = F}
+
+
+# #Output 'lite' version of metrics local
+
+shared_column_names <- colnames(local)[which(colnames(local) %in% colnames(farsighted.grid))]
+farsighted_all <- merge(local, farsighted.grid, by = shared_column_names, all.x=F, all.y=T)
+
+
+#Order the suggested grid path by optimal sequence
+farsighted_all <- farsighted_all[order(farsighted_all$far.sighted.sequence),]
+
+#Develop cummulative sum of network length metric
+
+farsighted_all$CummulativeNetworkExtent.m <- cumsum(farsighted_all$dist)
+farsighted_all$CummulativeHousesConnected.qty <- cumsum(farsighted_all$Demand..household....Target.household.count)
+
+#Scalar Values of region before expansion efforts began
+percent_houses_connected_at_start <- 1-sum(farsighted_all$Demographics...Projected.household.count)/(sum(farsighted_all$Full_population/farsighted_all$Ho_size))
+houses_connected_at_start <- (sum(farsighted_all$Full_population/farsighted_all$Ho_size) - sum(farsighted_all$Demographics...Projected.household.count))
+total_houses <- sum(farsighted_all$Full_population/farsighted_all$Ho_size)
+
+#Track cummulative electrification ratio 
+farsighted_all <- mutate(farsighted_all, PercentElectrification = (houses_connected_at_start + CummulativeHousesConnected.qty)/total_houses )
+
+##Output csv of 
+write.csv(farsighted_all, paste0(directory_name,"/metrics-local-grid-only-rollout_sequence.csv"), row.names=F)
+
+
+#Now pass through everything, grid and non grid alike'
+shared_column_names <- colnames(local)[which(colnames(local) %in% colnames(farsighted_all))]
+farsighted_all_combined <- merge(local, farsighted_all, by = shared_column_names, all.x=T, all.y=T)
+write.csv(farsighted_all_combined, paste0(directory_name,"/metrics-local-rollout_sequence.csv"), row.names=F)
+
+#Phase Bins already developed in the rollout sections, so let's aggregate by that
+#Now we can summarize key metrics by phase
+phase_summary <- ddply(farsighted_all, .(Phase), summarise, 
+                       sum_of_Demand...Projected.nodal.demand.per.year = sum(Demand...Projected.nodal.demand.per.year, na.rm=T),
+                       sum_of_Demand...Projected.nodal.discounted.demand = sum(Demand...Projected.nodal.discounted.demand, na.rm=T),
+                       sum_of_Demand..peak....Projected.peak.nodal.demand = sum(Demand..peak....Projected.peak.nodal.demand, na.rm=T),
+                       sum_of_Demand..household....Projected.household.demand.per.year = sum(Demand..household....Projected.household.demand.per.year, na.rm=T),
+                       sum_of_System..grid....Internal.system.initial.cost = sum(System..grid....Internal.system.initial.cost, na.rm=T),
+                       sum_of_System..grid....Installation.cost = sum(System..grid....Installation.cost,na.rm=T),
+                       sum_of_System..grid....Low.voltage.line.equipment.cost = sum(System..grid....Low.voltage.line.equipment.cost, na.rm=T),
+                       sum_of_System..grid....Transformer.cost = sum(System..grid....Transformer.cost, na.rm=T),
+                       sum_of_System..grid....Internal.system.recurring.cost.per.year = sum(System..grid....Internal.system.recurring.cost.per.year, na.rm=T),
+                       sum_of_System..grid....Electricity.cost.per.year = sum(System..grid....Electricity.cost.per.year, na.rm=T),
+                       sum_of_System..grid....Transformer.operations.and.maintenance.cost.per.year = sum(System..grid....Transformer.operations.and.maintenance.cost.per.year, na.rm=T),
+                       sum_of_System..grid....Transformer.replacement.cost.per.year = sum(System..grid....Transformer.replacement.cost.per.year, na.rm=T),
+                       sum_of_System..grid....Internal.system.nodal.discounted.cost = sum(System..grid....Internal.system.nodal.discounted.cost, na.rm=T),
+                       avg_of_System..grid....Internal.system.nodal.levelized.cost = mean(System..grid....Internal.system.nodal.levelized.cost, na.rm=T),
+                       sum_of_Population = sum(Pop, na.rm=T), 
+                       sum_of_Target_Households = sum(Demand..household....Target.household.count, na.rm=T), 
+                       sum_of_Demand...Projected.nodal.demand.per.year = sum(Demand...Projected.nodal.demand.per.year, na.rm=T),
+                       sum_of_installed_MV_network.m = sum(dist),
+                       electrification_achieved = max(PercentElectrification)
+                       )
+write.csv(phase_summary, paste0(directory_name,"/PhaseSummaryofAnticipatedGridRollout.csv"), row.names=F)
+
+#Develop Phase summaries on a per household level to come up with "average" metrics
+phase_summary_perHH <- ddply(farsighted_all, .(Phase), summarise,
+                      sum_of_Demand...Projected.nodal.demand.per.year = sum(Demand...Projected.nodal.demand.per.year) / sum(Demand..household....Target.household.count),
+                      sum_of_Demand...Projected.nodal.discounted.demand = sum(Demand...Projected.nodal.discounted.demand) / sum(Demand..household....Target.household.count),
+                      sum_of_Demand..peak....Projected.peak.nodal.demand = sum(Demand..peak....Projected.peak.nodal.demand) / sum(Demand..household....Target.household.count),
+                      sum_of_Demand..household....Projected.household.demand.per.year = sum(Demand..household....Projected.household.demand.per.year) / 
+                               sum(Demand..household....Target.household.count),
+                      sum_of_System..grid....Internal.system.initial.cost = sum(System..grid....Internal.system.initial.cost) / sum(Demand..household....Target.household.count),
+                      sum_of_System..grid....Installation.cost = sum(System..grid....Installation.cost) / sum(Demand..household....Target.household.count),
+                      sum_of_System..grid....Low.voltage.line.equipment.cost = sum(System..grid....Low.voltage.line.equipment.cost) / sum(Demand..household....Target.household.count),
+                      sum_of_System..grid....Transformer.cost = sum(System..grid....Transformer.cost) / sum(Demand..household....Target.household.count),
+                      sum_of_System..grid....Internal.system.recurring.cost.per.year = sum(System..grid....Internal.system.recurring.cost.per.year) / sum(Demand..household....Target.household.count),
+                      sum_of_System..grid....Electricity.cost.per.year = sum(System..grid....Electricity.cost.per.year) / sum(Demand..household....Target.household.count),
+                      sum_of_System..grid....Transformer.operations.and.maintenance.cost.per.year = sum(System..grid....Transformer.operations.and.maintenance.cost.per.year) / sum(Demand..household....Target.household.count),
+                      sum_of_System..grid....Transformer.replacement.cost.per.year = sum(System..grid....Transformer.replacement.cost.per.year) / sum(Demand..household....Target.household.count),
+                      sum_of_System..grid....Internal.system.nodal.discounted.cost = sum(System..grid....Internal.system.nodal.discounted.cost) / sum(Demand..household....Target.household.count),
+                      avg_of_System..grid....Internal.system.nodal.levelized.cost = mean(System..grid....Internal.system.nodal.levelized.cost) / sum(Demand..household....Target.household.count),
+                      
+                      sum_of_Target_Households = sum(Demand..household....Target.household.count) / sum(Demand..household....Target.household.count), 
+
+                       sum_of_Demand...Projected.nodal.demand.per.year = sum(Demand...Projected.nodal.demand.per.year) / sum(Demand..household....Target.household.count),
+                       
+                       sum_of_installed_MV_network.m = sum(dist) / sum(Demand..household....Target.household.count)
+                      )
+
+write.csv(phase_summary_perHH, paste0(directory_name,"/PhaseSummaryofAnticipatedGridRollout-perHH.csv"), row.names=F)
+
+##Prabhas' tips on bar graphs
+
+require(reshape2); require(stringr)
+
+
+farsighted_some <- subset(farsighted_all, select=c("Phase", 
+                                             "System..grid....Transformer.cost", 
+                                             "System..grid....Installation.cost", 
+                                             "System..grid....Low.voltage.line.equipment.cost", 
+                                             "System..grid....Electricity.cost.per.year",
+                                             "dist"))
+
+farsighted_some$MV.Wire.Costs <- farsighted_some$dist * 30
+
+farsighted_some_tall <- melt(farsighted_some, id.vars=c("Phase"),
+                             measure.vars=c("System..grid....Installation.cost", 
+                                            "System..grid....Low.voltage.line.equipment.cost", 
+                                            "System..grid....Electricity.cost.per.year",
+                                            "System..grid....Transformer.cost",
+                                            "MV.Wire.Costs"))
+
+# clean up names
+names(farsighted_some_tall) <- c("Phase", "Type", "Cost") 
+# clean up values
+
+levels(farsighted_some_tall$Type) <- str_replace_all(str_replace_all(levels(farsighted_some_tall$Type), "System..grid....", ""), "[.]", " ")  
+
+# PLOT!
+phase_costs <- ggplot(farsighted_some_tall, aes(x=Phase, y=Cost, fill=Type)) + geom_bar(stat='identity')
+
+#Output Bar charts 
+tiff(filename=paste0(directory_name,"/TotalCost-Summary-Phased.tiff"))
+plot(phase_costs)
+dev.off()
+
+
+#What does the rollout look like on Terrain map
+ranked_plot_GE <- function(points){
+  
+  loc <- c(min(points$X)-1, #left 
+           min(points$Y)-1, #bottom
+           max(points$X)+1, #right
+           max(points$Y)+1) #top
+  map <- get_map(location= loc)
+  
+  p<- ggmap(map, legend = "topleft") + 
+    geom_point(data=points, aes(x = X, y = Y, colour = PhasePlot, shape = Xy_source)) +
+      scale_color_brewer(palette="YlGnBu") + 
+      scale_shape_manual(values=c(20, 11), labels=c("BIG", "BPS")) +    
+    labs(title = "Proposed Grid Rollout", x = "Longitude", y="Latitude", color = "Electrification Sequence") +
+    coord_equal(xlim=c(min(points$X),max(points$X)), 
+                ylim=c(min(points$Y),max(points$Y)))
+  return(p)
+  }
+
+rollout_plot_GE <- ranked_plot_GE(farsighted_all_combined) + blank_theme()
+##My favorite plot
+tiff(filename=paste0(directory_name,"/Output-Overview-Map-GE.tiff"), width = width, height=width*aspect_ratio)
+plot(rollout_plot_GE)
+dev.off()
+
+# ##Outputs to working director
+# mu_ranked <- merge(proposed, mu_ranked, by.x = "FID", by.y = "Settlement.id")
+# write.csv(mu_ranked, "metrics-local-grid_with_rollout_sequence.csv", row.names=F)
+# 
+# #Output 'lite' version of metrics local
+# mu_ranked_all <- merge(malukuutara, mu_ranked, by.x = "Name", by.y = "Name", all.x=T)
+# write.csv(mu_ranked_all[c(1:11,187,378:399)], "metrics-local-grid_with_rollout_sequence-lite.csv", row.names=F)
+# 
+# 
+# #Output a new shapefile with all the attirbute data of interest
+#proposed2 <- merge(proposed, mu_ranked, by.x = "FID", by.y = "Settlement.id")
+# writeLinesShape(proposed2, "proposed-grid-with-rollout.shp")

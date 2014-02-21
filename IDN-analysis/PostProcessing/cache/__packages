@@ -1,0 +1,13 @@
+base
+data.table
+gdata
+geosphere
+ggplot2
+knitr
+maptools
+PBSmapping
+plyr
+rgeos
+sp
+stringr
+WriteXLS
