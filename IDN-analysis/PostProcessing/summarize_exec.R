@@ -57,14 +57,17 @@ directory_names <- c("98-Ternate-1km",
 path_name <- low_demand_path_name
 directory_names <- low_demand_directory_names
 
+directory_name <- "~/github/networkplanner.R/test_data/"
 i=1
 
 for (i in 1:length(directory_names)){
   print(i)
-  scenario_prefix <- str_sub(directory_names[i], end = str_locate(directory_names[i], "-")[1])
   
   directory_name <- paste0(path_name, directory_names[i])
+  scenario_prefix <- str_sub(directory_names[i], end = str_locate(directory_names[i], "-")[1])
+  
   #directory_name <- "~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/January-2014/564-MalukuUtara-900HHD/"
+  directory_name <- "~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/February-2014/HybridBuffer/108-Tual-TualBarat-Hybrid/" 
   
   # #Import metrics local for each island areas in the analysis
   # #metrics local is the key output file of each Network Planner scenario capturing nodal level information
@@ -78,102 +81,102 @@ for (i in 1:length(directory_names)){
   }
   
   proj4 <- read.csv(paste0(directory_name,"/metrics-local.csv"), nrows=1, header = FALSE)
+  
+  ## Import proposed networks for interpeting new network, this is the NP minimum spanning tree
+  ##Prabhas' function imports both shapefile line  types in one go and merges them, useful...
+  grid_lines <- load.polylines(directory_name)
+  
+  # #Import Metrics Gloabl stuff too, 
+  global <- load.global(read.csv(paste0(directory_name,"/metrics-global.csv"),stringsAsFactors=F))
+  
+
+  # #DESA POLYGONS
+  # #Now, let's incorporate some polygon shapefile polygons for background and references 
+  if (i ==1) {
+    # #Maluku Utara Polygons
+    malukuutara_polygon <- readShapePoly("~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPinputs/Dec2013-Preprocessing/Shapefiles/Maluku_Utara_with_Census_Data_+_PLN_Areas.shp")
+    #now let's make it more ggplottable and keep any attribute data 
+    malukuutara_polygon@data$id <- rownames(malukuutara_polygon@data)
+    malukuutara_polygon <- merge(malukuutara_polygon@data, fortify(malukuutara_polygon), by = 'id')
+    polygon<- malukuutara_polygon
+    
+  }else if (i == 2){
+    #Maluku Polygons 
+    maluku_polygon <- readShapePoly("~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPinputs/Dec2013-Preprocessing/Shapefiles/Maluku_with_Census_Data_+_PLN_Areas.shp")
+    #now let's make it more ggplottable and keep any attribute data 
+    maluku_polygon@data$id <- rownames(maluku_polygon@data)
+    maluku_polygon <- merge(maluku_polygon@data, fortify(maluku_polygon), by = 'id')
+    polygon <- maluku_polygon
+  } else if (i ==7) {
+    # #NTT Polygons: LOAD TIME ~3:55
+    ntt_polygon <- readShapePoly("~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPinputs/Dec2013-Preprocessing/Shapefiles/NTT_with_Census_Data_+_PLN_Areas.shp")
+    # #now let's make it more ggplottable and keep any attribute data 
+    ntt_polygon@data$id <- rownames(ntt_polygon@data)
+    ntt_polygon <- merge(ntt_polygon@data, fortify(ntt_polygon), by = 'id')
+    polygon <- ntt_polygon
+  }
+  
+  #Define more useful population catgories for project area polygons
+  polygon <- popbins(polygon)
+  
+  ### ~~~~~~~~~~~~~~DATA LOADED!~~~~~~~~~~~~~~~~~~~~~~~####
+  
+  # Plotting Maps
+  #There are some useful maps we commonly generate.  Let's try to automate and streamline that here. 
+  #all bells and whistles.  This is a comprehensive plot of information for which we can subtract/add more information in the future.
+  #Thanks @prabhasp!
+    
+  #Explicitly define the plot regions of interest based on NP outputs and BPS Polygon data
+  big_picture_plot <- comprehensive_plot(polygon, grid_lines, local) + blank_theme() 
+   
+  #Aspect Ratio: height to width
+  aspect_ratio <- (max(local$Y)-min(local$Y))/(max(local$X)-min(local$X))
+  width <- 1500 #desired pixel width of image outputs
+  
+
+  ##My favorite plot
+   png(filename=paste0(directory_name,"/Output-Overview-Map.png"), width = width, height=width*aspect_ratio)
+   plot(big_picture_plot)
+   dev.off()
+  
+  #Develop map with Google Background for better reference
+  proposed_GE_background <- google_earth_plot(grid_lines, local)
+  
+  #Sample Plots
+  big_picture_plot
+  proposed_GE_background
+  ##My favorite plot
+  png(filename=paste0(directory_name,"/Output-Overview-Map-GEbackground.png"), width = width, height=width*aspect_ratio)
+  plot(proposed_GE_background)
+  dev.off()
+ 
+  # Summarize NP Output Data
+  ##Here, we interpret basic consequence of the suggested network and try to express some useful metrics.
+
+  #Summarize outputs by technology type (ie Off-Grid, Mini-Grid and Grid systems)
+  summary <- summarize_metrics_local_MV5(local)
+
+  local_agg <- summary
+  #Determine Existing Grid stastics 
+  existing_length <- polyline.length.within(local, directory_name)
+  existing_pop <- sum(local$Full_population)
+  existing_houses <- sum((local$Full_population-local$Old_pop)/local$Ho_size)
+  
+  
+  #Grid Summary
+  grid<-grid.summary.corrected.existing(summary, global, existing_length, existing_houses)
+  mg <- mini.grid.summary.MV5(local_agg)
+  og <- off.grid.summary(local_agg)
+  
+  options("scipen"=100, "digits"=2)
 #   
-#   ## Import proposed networks for interpeting new network, this is the NP minimum spanning tree
-#   ##Prabhas' function imports both shapefile line  types in one go and merges them, useful...
-#   grid_lines <- load.polylines(directory_name)
+  all_systems_summary <- rbind(grid, mg, og) 
+  WriteXLS("all_systems_summary", str_c(directory_name,
+                                        "/",
+                                        scenario_prefix,
+                                        "MetricsLocal-MVMax5-SingleSheetSummary.xls"))
+   
 #   
-#   # #Import Metrics Gloabl stuff too, 
-#   global <- load.global(read.csv(paste0(directory_name,"/metrics-global.csv"),stringsAsFactors=F))
-#   
-# 
-#   # #DESA POLYGONS
-#   # #Now, let's incorporate some polygon shapefile polygons for background and references 
-#   if (i ==1) {
-#     # #Maluku Utara Polygons
-#     malukuutara_polygon <- readShapePoly("~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPinputs/Dec2013-Preprocessing/Shapefiles/Maluku_Utara_with_Census_Data_+_PLN_Areas.shp")
-#     #now let's make it more ggplottable and keep any attribute data 
-#     malukuutara_polygon@data$id <- rownames(malukuutara_polygon@data)
-#     malukuutara_polygon <- merge(malukuutara_polygon@data, fortify(malukuutara_polygon), by = 'id')
-#     polygon<- malukuutara_polygon
-#     
-#   }else if (i == 2){
-#     #Maluku Polygons 
-#     maluku_polygon <- readShapePoly("~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPinputs/Dec2013-Preprocessing/Shapefiles/Maluku_with_Census_Data_+_PLN_Areas.shp")
-#     #now let's make it more ggplottable and keep any attribute data 
-#     maluku_polygon@data$id <- rownames(maluku_polygon@data)
-#     maluku_polygon <- merge(maluku_polygon@data, fortify(maluku_polygon), by = 'id')
-#     polygon <- maluku_polygon
-#   } else if (i ==7) {
-#     # #NTT Polygons: LOAD TIME ~3:55
-#     ntt_polygon <- readShapePoly("~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPinputs/Dec2013-Preprocessing/Shapefiles/NTT_with_Census_Data_+_PLN_Areas.shp")
-#     # #now let's make it more ggplottable and keep any attribute data 
-#     ntt_polygon@data$id <- rownames(ntt_polygon@data)
-#     ntt_polygon <- merge(ntt_polygon@data, fortify(ntt_polygon), by = 'id')
-#     polygon <- ntt_polygon
-#   }
-#   
-#   #Define more useful population catgories for project area polygons
-#   polygon <- popbins(polygon)
-#   
-#   ### ~~~~~~~~~~~~~~DATA LOADED!~~~~~~~~~~~~~~~~~~~~~~~####
-#   
-#   # Plotting Maps
-#   #There are some useful maps we commonly generate.  Let's try to automate and streamline that here. 
-#   #all bells and whistles.  This is a comprehensive plot of information for which we can subtract/add more information in the future.
-#   #Thanks @prabhasp!
-#     
-#   #Explicitly define the plot regions of interest based on NP outputs and BPS Polygon data
-#   big_picture_plot <- comprehensive_plot(polygon, grid_lines, local) + blank_theme() 
-#    
-#   #Aspect Ratio: height to width
-#   aspect_ratio <- (max(local$Y)-min(local$Y))/(max(local$X)-min(local$X))
-#   width <- 1500 #desired pixel width of image outputs
-#   
-# 
-#   ##My favorite plot
-#    tiff(filename=paste0(directory_name,"/Output-Overview-Map.tiff"), width = width, height=width*aspect_ratio)
-#    plot(big_picture_plot)
-#    dev.off()
-#   
-#   #Develop map with Google Background for better reference
-#   proposed_GE_background <- google_earth_plot(grid_lines, local)
-#   
-#   #Sample Plots
-#   big_picture_plot
-#   proposed_GE_background
-#   ##My favorite plot
-#   tiff(filename=paste0(directory_name,"/Output-Overview-Map-GEbackground.tiff"), width = width, height=width*aspect_ratio)
-#   plot(proposed_GE_background)
-#   dev.off()
-#  
-#   # Summarize NP Output Data
-#   ##Here, we interpret basic consequence of the suggested network and try to express some useful metrics.
-# 
-#   #Summarize outputs by technology type (ie Off-Grid, Mini-Grid and Grid systems)
-#   summary <- summarize_metrics_local_MV5(local)
-# 
-#   local_agg <- summary
-#   #Determine Existing Grid stastics 
-#   existing_length <- polyline.length.within(local, directory_name)
-#   existing_pop <- sum(local$Full_population)
-#   existing_houses <- sum((local$Full_population-local$Old_pop)/local$Ho_size)
-#   
-#   
-#   #Grid Summary
-#   grid<-grid.summary.corrected.existing(summary, global, existing_length, existing_houses)
-#   mg <- mini.grid.summary.MV5(local_agg)
-#   og <- off.grid.summary(local_agg)
-#   
-#   options("scipen"=100, "digits"=2)
-# #   
-#   all_systems_summary <- rbind(grid, mg, og) 
-#   WriteXLS("all_systems_summary", str_c(directory_name,
-#                                         "/",
-#                                         scenario_prefix,
-#                                         "MetricsLocal-MVMax5-SingleSheetSummary.xls"))
-#    
-# #   
 
   # Rollout 
   #If all that stuff works, let's suggest a sequence in which to roll out the construction of grid-nodes.  This has been pre-developed and we're reapplying here 
@@ -278,12 +281,12 @@ for (i in 1:length(directory_names)){
 #   farsighted_all <- merge(local, farsighted_grid, by = shared_column_names, all.x=F, all.y=T)
 #   farsighted_all_metrics <- merge(local, farsighted_grid, by = shared_column_names, all.x=T, all.y=T)
 #   
-#   ##Output csv of it all with ranking and origin metrics local stuff
-#   write.csv(farsighted_all, paste0(directory_name,
-#                                    "/",
-#                                    scenario_prefix,
-#                                    "metrics-local-grid-only-rollout_sequence.csv"), row.names=F)
-#   
+  ##Output csv of it all with ranking and origin metrics local stuff
+  write.csv(farsighted_grid, paste0(directory_name,
+                                   "/",
+                                   scenario_prefix,
+                                   "metrics-local-grid-only-rollout_sequence.csv"), row.names=F)
+  
 #   ##Ouput more comprehensive spreadsheet
 #   standalone_systems <- subset(local, ((Metric...System == "mini-grid") |
 #                                         Metric...System == "off-grid"))
