@@ -104,7 +104,7 @@ summarize_metrics_local_MV5 <- function(local){
                          sum_of_Distribution...Low.voltage.line.initial.cost = sum(Distribution...Low.voltage.line.initial.cost, na.rm=T),
                          sum_of_System..mini.grid....System.recurring.cost.per.year = sum(System..mini.grid....System.recurring.cost.per.year, na.rm=T),
                          sum_of_System..mini.grid....Annual.Energy.Storage.Requirement.kWh = sum(System..mini.grid....Energy.storage.demand.per.year, na.rm=T),
-                         sum_of_System..mini.grid....Energy.Storage.cost.per.year = sum(System..mini.grid....Energy.storage.cost.per.year, na.rm=T),
+                         sum_of_System..mini.grid....Energy.Storage.costs.per.year = sum(System..mini.grid....Energy.storage.costs.per.year, na.rm=T),
                          sum_of_System..mini.grid....Generation.operations.and.maintenance.cost.per.year = sum(System..mini.grid....Generation.operations.and.maintenance.cost.per.year, na.rm=T),
                          sum_of_System..mini.grid....Generation.replacement.cost.per.year = sum(System..mini.grid....Generation.lifetime.replacement.cost.per.year, na.rm=T),
                          sum_of_Distribution...Low.voltage.line.replacement.cost.per.year = sum(Distribution...Low.voltage.line.replacement.cost.per.year, na.rm=T),
@@ -135,27 +135,29 @@ summarize_metrics_local_MV5 <- function(local){
 
 # Off-Grid
 off.grid.summary <- function(local_agg){
-  Indicator <- c("Proposed Total watts of SHS", "Proposed new Off-Grid connections", "Total Initial cost for system", 
-                 "System discounted cost", "Total demand met by SHS", "Total levelized cost per kWH for Off-Grid power", "Off-Grid Settlements")
-  Units <- c("kW", "Households", "$", "$", "kWh", "$", "Qty.")
-  Total <- vector(mode="double",7)
-  per_HH <- vector(mode="double",7)
+  Indicator <- c("Proposed Total watts of SHS", 
+                 "Proposed new Off-Grid connections", 
+                 "Total Initial cost for system", 
+                 "Total Recurring Costs per Year", 
+                 "Total Annual demand met by Off-Grid", 
+                 "Off-Grid Settlements")
+  Units <- c("kW", "Households", "$", "$", "kWh/year","Qty.")
+  Total <- vector(mode="double",6)
+  per_HH <- vector(mode="double",6)
   data <- t(as.matrix(subset(x=local_agg,Metric...System == "off-grid")))
   
   Total[1] <- data[rownames(data) == "sum_of_System..off.grid....Photovoltaic.panel.actual.capacity"]
   Total[2] <- data[rownames(data) == "sum_of_Demographics...Projected.household.count"]
   Total[3] <- data[rownames(data) == "sum_of_System..off.grid....System.initial.cost"]   
-  Total[4] <- data[rownames(data) == "sum_of_System..off.grid....System.nodal.discounted.cost"]   
-  Total[5] <- data[rownames(data) == "sum_of_Demand...Projected.nodal.discounted.demand"]   
-  Total[6] <- data[rownames(data) == "avg_of_System..off.grid....System.nodal.levelized.cost"]   
-  Total[7] <- as.numeric(data[rownames(data) == "qty_of_settlements"])
+  Total[4] <- data[rownames(data) == "sum_of_System..off.grid....System.recurring.cost.per.year"]   
+  Total[5] <- data[rownames(data) == "sum_of_Demand...Projected.nodal.demand.per.year.kWh"]   
+  Total[6] <- as.numeric(data[rownames(data) == "qty_of_settlements"])
   
   
   Total <- as.numeric(Total)
   per_HH <- Total/Total[2]
-  per_HH[c(2,6)] <- NA
-  per_settlement <- Total/Total[7]
-  per_HH[6] <- NA
+  per_HH[c(2)] <- NA
+  per_settlement <- Total/Total[6]
   off.grid.table <- data.frame(Indicator,Units,Total,per_HH,per_settlement)
   
   return(off.grid.table)
@@ -170,27 +172,26 @@ mini.grid.summary <- function(local_agg){
                  "Proposed new mini-grid connections", 
                  "Mini Grid Settlements", 
                  "Total Initial cost for system", 
-                 "System discounted cost", 
-                 "Total demand met by MiniGrids", 
-                 "Total levelized cost per kWH for MiniGrid power")
-  Units <- c("kW", "Households", "Qty", "$", "$", "kWh", "$")
-  Total <- vector(mode="double",7)
-  per_HH <- vector(mode="double",7)
+                 "Mini-Grid Total Recurring Costs per Year",
+                 "Total Annual Demand met by MiniGrids")
+  
+  Units <- c("kW", "Households", "Qty", "$", "$", "kWh/year")
+  Total <- vector(mode="double",6)
+  per_HH <- vector(mode="double",6)
   data <- t(as.matrix(subset(x=local_agg,Metric...System == "mini-grid")))
   
   Total[1] <- as.numeric(data[rownames(data) == "sum_of_System..mini.grid....Diesel.generator.actual.system.capacity"])
   Total[2] <- as.numeric(data[rownames(data) == "sum_of_Demographics...Projected.household.count"])
   Total[3] <- as.numeric(data[rownames(data) == "qty_of_settlements"])
   Total[4] <- as.numeric(data[rownames(data) == "sum_of_System..mini.grid....System.initial.cost"])
-  Total[5] <- as.numeric(data[rownames(data) == "sum_of_System..mini.grid....System.nodal.discounted.cost"])
-  Total[6] <- as.numeric(data[rownames(data) == "sum_of_Demand...Projected.nodal.discounted.demand"])
-  Total[7] <- as.numeric(data[rownames(data) == "avg_of_System..mini.grid....System.nodal.levelized.cost"])
+  Total[5] <- as.numeric(data[rownames(data) == "sum_of_System..mini.grid....System.recurring.cost.per.year"])
+  Total[6] <- as.numeric(data[rownames(data) == "sum_of_Demand...Projected.nodal.demand.per.year.kWh"])
   
   Total <- as.numeric(Total)
   per_HH <- Total/Total[2]
   per_settlement <- Total/Total[3]
-  per_HH[7] <- NA
-  per_settlement[7] <- NA
+  #per_HH[7] <- NA
+  #per_settlement[7] <- NA
   mini.grid.table <- data.frame(Indicator,Units,Total,per_HH,per_settlement)
   
   return(mini.grid.table)
@@ -204,31 +205,27 @@ mini.grid.summary.MV5 <- function(local_agg){
   Indicator <- c("Proposed Total Capacity of Mini-Grids", 
                  "Proposed new mini-grid connections", 
                  "Mini Grid Settlements", 
-                 "Total Initial cost for system", 
-                 "System discounted cost", 
-                 "Total demand met by MiniGrids", 
-                 "Total levelized cost per kWH for MiniGrid power",
+                 "Total Initial Costs", 
+                 "Total Recurring Costs Per Year", 
+                 "Total Annual Demand met by MiniGrids", 
                  "Total Energy Storage Requirement",
                  "Annual Energy Storage Costs")
-  Units <- c("kW", "Households", "Qty", "$", "$", "kWh", "$", "kWh/yr", "$")
-  Total <- vector(mode="double",9)
-  per_HH <- vector(mode="double",9)
+  Units <- c("kW", "Households", "Qty", "$", "$", "kWh", "kWh/yr", "$")
+  Total <- vector(mode="double",8)
+  per_HH <- vector(mode="double",8)
   data <- t(as.matrix(subset(x=local_agg,Metric...System == "mini-grid")))
   
   Total[1] <- as.numeric(data[rownames(data) == "sum_of_System..mini.grid....Generation.System.actual.system.capacity"])
   Total[2] <- as.numeric(data[rownames(data) == "sum_of_Demographics...Projected.household.count"])
   Total[3] <- as.numeric(data[rownames(data) == "qty_of_settlements"])
   Total[4] <- as.numeric(data[rownames(data) == "sum_of_System..mini.grid....System.initial.cost"])
-  Total[5] <- as.numeric(data[rownames(data) == "sum_of_System..mini.grid....System.nodal.discounted.cost"])
-  Total[6] <- as.numeric(data[rownames(data) == "sum_of_Demand...Projected.nodal.discounted.demand"])
-  Total[7] <- as.numeric(data[rownames(data) == "avg_of_System..mini.grid....System.nodal.levelized.cost"])
-  Total[8] <- as.numeric(data[rownames(data) == "sum_of_System..mini.grid....Annual.Energy.Storage.Requirement.kWh"])
-  Total[9] <- as.numeric(data[rownames(data) == "sum_of_System..mini.grid....Energy.Storage.cost.per.year"])
+  Total[5] <- as.numeric(data[rownames(data) == "sum_of_System..mini.grid....System.recurring.cost.per.year"])
+  Total[6] <- as.numeric(data[rownames(data) == "sum_of_Demand...Projected.nodal.demand.per.year.kWh"])
+  Total[7] <- as.numeric(data[rownames(data) == "sum_of_System..mini.grid....Annual.Energy.Storage.Requirement.kWh"])
+  Total[8] <- as.numeric(data[rownames(data) == "sum_of_System..mini.grid....Energy.Storage.costs.per.year"])
   Total <- as.numeric(Total)
   per_HH <- Total/Total[2]
   per_settlement <- Total/Total[3]
-  per_HH[7] <- NA
-  per_settlement[7] <- NA
   mini.grid.table <- data.frame(Indicator,Units,Total,per_HH,per_settlement)
   
   return(mini.grid.table)
@@ -237,14 +234,19 @@ mini.grid.summary.MV5 <- function(local_agg){
 # Grid
 grid.summary <- function(local_agg, global){
   
-  Indicator <- c("Existing MV line length", "Proposed MV line length", "Proposed new grid connections", 
-                 "Total Initial cost for grid network (MV+LV)", "Total initial cost for MV grid network",
-                 "Total initial cost for LV grid network", "System discounted recurring cost",
-                 "Total Projected demand met by Grid", "Total levelized cost per kWH for Grid power","Grid Settlements",
+  Indicator <- c("Existing MV line length", 
+                 "Proposed MV line length", 
+                 "Proposed new grid connections", 
+                 "Total Initial cost for grid network (MV+LV)", 
+                 "Total initial cost for MV grid network",
+                 "Total initial cost for LV grid network", 
+                 "System of LV Recurring costs Per Year",
+                 "Total Annual Demand met by Grid", 
+                 "Grid Settlements",
                  "Total Peak Demand")
-  Units <- c("km", "km", "Households", "$", "$", "$", "$", "kWh", "$","Qty", "kWp")
-  Total <- vector(mode="double",11)
-  per_HH <- vector(mode="double",11)
+  Units <- c("km", "km", "Households", "$", "$", "$", "$", "kWh/yr","Qty", "kWp")
+  Total <- vector(mode="double",10)
+  per_HH <- vector(mode="double",10)
   data <- t(as.matrix(subset(x=local_agg,Metric...System == "grid")))
   
   Total[1] <- global[rownames(global) == "system (grid) system total existing network length",]/1000
@@ -253,16 +255,15 @@ grid.summary <- function(local_agg, global){
   Total[4] <- global[rownames(global) == "system (grid) system total external initial cost",] + global[rownames(global) == "system (grid) system total internal initial cost",]
   Total[5] <- global[rownames(global) == "system (grid) system total external initial cost",]
   Total[6] <- global[rownames(global) == "system (grid) system total internal initial cost",]
-  Total[7] <- global[rownames(global) == "system (grid) system total discounted cost",]
-  Total[8] <- global[rownames(global) == "system (grid) system total discounted demand",]
-  Total[9] <- global[rownames(global) == "system (grid) system total discounted cost",] / global[rownames(global) == "system (grid) system total discounted demand",]
-  Total[10] <- as.numeric(data[rownames(data) == "qty_of_settlements"])
-  Total[11] <- as.numeric(data[rownames(data) == "sum_of_Demand..peak....Projected.peak.nodal.demand.kW"])
+  Total[7] <- as.numeric(data[rownames(data) == 'sum_of_System..grid....Internal.system.recurring.cost.per.year'])
+  Total[8] <- as.numeric(data[rownames(data) == "sum_of_Demand...Projected.nodal.demand.per.year.kWh"])
+  Total[9] <- as.numeric(data[rownames(data) == "qty_of_settlements"])
+  Total[10] <- as.numeric(data[rownames(data) == "sum_of_Demand..peak....Projected.peak.nodal.demand.kW"])
   
   Total <- as.numeric(Total)
   per_HH <- Total/Total[3]
-  per_HH[c(1,3,9)] <- NA
-  per_settlement <- Total/Total[10]
+  per_HH[c(1,3)] <- NA
+  per_settlement <- Total/Total[9]
   grid.table <- data.frame(Indicator,Units,Total,per_HH,per_settlement)
   return(grid.table)
 }
@@ -270,15 +271,21 @@ grid.summary <- function(local_agg, global){
 # Grid with adjusted pre-existing grid figure 
 grid.summary.corrected.existing <- function(local_agg, global, existing_grid, existing_conections){
   
-  Indicator <- c("Existing MV line length", "Existing PLN Connections", "Proposed MV line length", "Proposed new grid connections", 
-                 "Total Initial cost for grid network (MV+LV)", "Total initial cost for MV grid network",
-                 "Total initial cost for LV grid network", "System discounted recurring cost",
-                 "Total Projected demand met by Grid", "Total levelized cost per kWH for Grid power","Grid Settlements",
+  Indicator <- c("Existing MV line length", 
+                 "Existing Utility Connections", 
+                 "Proposed MV line length", 
+                 "Proposed new grid connections", 
+                 "Total Initial cost for grid network (MV+LV)", 
+                 "Total initial cost for MV grid network",
+                 "Total initial cost for LV grid network", 
+                 "System discounted recurring cost",
+                 "Total Annual Demand met by Grid", 
+                 "Grid Settlements",
                  "Total Peak Demand")
 
-  Units <- c("km", "Households", "km", "Households", "$", "$", "$", "$", "kWh", "$","Qty","kWp")
-  Total <- vector(mode="double",12)
-  per_HH <- vector(mode="double",12)
+  Units <- c("km", "Households", "km", "Households", "$", "$", "$", "$", "kWh","Qty","kWp")
+  Total <- vector(mode="double",11)
+  per_HH <- vector(mode="double",11)
   data <- t(as.matrix(subset(x=local_agg,Metric...System == "grid")))
   
   Total[1] <- existing_grid
@@ -289,17 +296,16 @@ grid.summary.corrected.existing <- function(local_agg, global, existing_grid, ex
   Total[6] <- global[rownames(global) == "system (grid) system total external initial cost",]
   Total[7] <- global[rownames(global) == "system (grid) system total internal initial cost",]
   Total[8] <- global[rownames(global) == "system (grid) system total discounted cost",]
-  Total[9] <- global[rownames(global) == "system (grid) system total discounted demand",]
-  Total[10] <- global[rownames(global) == "system (grid) system total discounted cost",] / global[rownames(global) == "system (grid) system total discounted demand",]
-  Total[11] <- as.numeric(data[rownames(data) == "qty_of_settlements"])
-  Total[12] <- as.numeric(data[rownames(data) == "sum_of_Demand..peak....Projected.peak.nodal.demand.kW"])
+  Total[9] <- as.numeric(data[rownames(data) == "sum_of_Demand...Projected.nodal.demand.per.year.kWh"])
+  Total[10] <- as.numeric(data[rownames(data) == "qty_of_settlements"])
+  Total[11] <- as.numeric(data[rownames(data) == "sum_of_Demand..peak....Projected.peak.nodal.demand.kW"])
     
   Total <- as.numeric(Total)
   per_HH <- Total/Total[4]
-  per_HH[c(4,10)] <- NA
+  per_HH[c(4)] <- NA
   per_HH[1] <-Total[1]/existing_conections
   per_HH[2] <- NA
-  per_settlement <- Total/Total[11]
+  per_settlement <- Total/Total[10]
   per_settlement[c(1,2)] <- NA 
   grid.table <- data.frame(Indicator,Units,Total,per_HH,per_settlement)
   return(grid.table)
