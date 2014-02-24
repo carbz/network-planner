@@ -79,6 +79,17 @@ for (i in 1:length(directory_names)){
   if ("Full_popul" %in% names(local)){
     local$Full_population <- local$Full_popul 
   }
+  #check to see if older typo variable version is considered 
+  if ("System..mini.grid....Generatation.installation.cost" %in% names(local)){
+    local$System..mini.grid....Generation.installation.cost <- local$System..mini.grid....Generatation.installation.cost
+  }
+  if(!("System..mini.grid....Energy.storage.demand.per.year" %in% names(local))){
+   local <- mutate(local,
+                   System..mini.grid....Energy.storage.demand.per.year = System..mini.grid....Energy.storage.costs.per.year/
+                     System..mini.grid....Energy.storage.cost.per.kwh)
+  }
+  
+  
   
   proj4 <- read.csv(paste0(directory_name,"/metrics-local.csv"), nrows=1, header = FALSE)
   
@@ -161,7 +172,6 @@ for (i in 1:length(directory_names)){
   existing_length <- polyline.length.within(local, directory_name)
   existing_pop <- sum(local$Full_population)
   existing_houses <- sum((local$Full_population-local$Old_pop)/local$Ho_size)
-  
   
   #Grid Summary
   grid<-grid.summary.corrected.existing(summary, global, existing_length, existing_houses)
