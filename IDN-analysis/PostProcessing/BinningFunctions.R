@@ -76,6 +76,9 @@ qplot(factor(Demographics...Projected.household.count.HHbin),
 metrics = ggplot(local, aes(x=Demographics...Projected.household.count.HHbin, 
                             fill=Metric...System)) + geom_bar()
 
+metrics2 = ggplot(local, aes(x=Demographics...Projected.household.count.equalbins, 
+                            fill=Metric...System)) + geom_bar()
+
 
 
 #Replace 0 Population values with NA value, 0 populations were removed clusters
@@ -99,7 +102,7 @@ HHoldBins <- ddply(local, .(Demographics...Projected.household.count.predefinedb
 ###summarize number of settlements in bins sized by equal number of Settlements-works
 #Determine HHsize/settlement breaks that split settlements into specified percentages
 HHoldBinsEqualSettlementQty <- quantile(local$Demographics...Projected.household.count, 
-                                        probs = c(.2, .4, .6, .8, 1), na.rm=T)#break settlements into quantiles @ 20, 40, 60, 80 & 100%
+                                        probs = c(0, .2, .4, .6, .8, 1), na.rm=T)#break settlements into quantiles @ 20, 40, 60, 80 & 100%
 #Determine Settlement Bins                        
 local$Demographics...Projected.household.count.SettlementBin <- 
   cut(local$Demographics...Projected.household.count, HHoldBinsEqualSettlementQty, include.lowest = TRUE)
@@ -141,6 +144,24 @@ BinSummaryEqualHH <- ddply(local, .(local$Demographics...Projected.household.cou
                            SHS = sum(Demographics...Projected.household.count[which(Metric...System=="off-grid")])
 )
 
+ggplot() + 
+  geom_bar(data = local, aes(x=Demographics...Projected.household.count.SettlementBin, 
+                             fill=Metric...System)) +
+  scale_fill_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) +
+  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
+  labs(title = "Households per Settlement", x = "Desnity Bin of Households/Settlement", y="Number of Settlements", color = "Electrification Tech.")
+
+
+HouseHoldBinChart <- function(local, bin=factor('Demographics...Projected.household.count.SettlementBin'))  {
+  ggplot() + 
+  geom_bar(data = local, aes(x=bin, fill=Metric...System)) +
+  scale_fill_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) +
+  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank())}
+
+HouseHoldBinChart(local, Demographics...Projected.household.count.SettlementBin)
+  labs(title = "Households per Settlement", x = "Desnity Bin of Households/Settlement", y="Number of Settlements", color = "Electrification Tech.")
+  
+  
 ###summarize number of HHolds (sum) and number of settlements (AKA observations/nobs) per bin as was originally done in Excel for scenario 230
 ###still needs work if want cross-comparison... 
 #Specify the Bin categories of ClustHouseholds(Edwin did in original 230 analysis) 
