@@ -104,7 +104,7 @@ summarize_metrics_local_MV5 <- function(local){
                          sum_of_Distribution...Low.voltage.line.initial.cost = sum(Distribution...Low.voltage.line.initial.cost, na.rm=T),
                          sum_of_System..mini.grid....System.recurring.cost.per.year = sum(System..mini.grid....System.recurring.cost.per.year, na.rm=T),
                          sum_of_System..mini.grid....Annual.Energy.Storage.Requirement.kWh = sum(System..mini.grid....Energy.storage.demand.per.year, na.rm=T),
-                         sum_of_System..mini.grid....Energy.Storage.costs.per.year = sum(System..mini.grid....Energy.storage.costs.per.year, na.rm=T),
+                         sum_of_System..mini.grid....Energy.Storage.cost.per.year = sum(System..mini.grid....Energy.storage.cost.per.year, na.rm=T),
                          sum_of_System..mini.grid....Generation.operations.and.maintenance.cost.per.year = sum(System..mini.grid....Generation.operations.and.maintenance.cost.per.year, na.rm=T),
                          sum_of_System..mini.grid....Generation.replacement.cost.per.year = sum(System..mini.grid....Generation.lifetime.replacement.cost.per.year, na.rm=T),
                          sum_of_Distribution...Low.voltage.line.replacement.cost.per.year = sum(Distribution...Low.voltage.line.replacement.cost.per.year, na.rm=T),
@@ -222,7 +222,7 @@ mini.grid.summary.MV5 <- function(local_agg){
   Total[5] <- as.numeric(data[rownames(data) == "sum_of_System..mini.grid....System.recurring.cost.per.year"])
   Total[6] <- as.numeric(data[rownames(data) == "sum_of_Demand...Projected.nodal.demand.per.year.kWh"])
   Total[7] <- as.numeric(data[rownames(data) == "sum_of_System..mini.grid....Annual.Energy.Storage.Requirement.kWh"])
-  Total[8] <- as.numeric(data[rownames(data) == "sum_of_System..mini.grid....Energy.Storage.costs.per.year"])
+  Total[8] <- as.numeric(data[rownames(data) == "sum_of_System..mini.grid....Energy.Storage.cost.per.year"])
   Total <- as.numeric(Total)
   per_HH <- Total/Total[2]
   per_settlement <- Total/Total[3]
