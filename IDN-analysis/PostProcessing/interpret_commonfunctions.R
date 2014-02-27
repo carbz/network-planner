@@ -517,3 +517,46 @@ ranked_plot_GE <- function(points){
   return(p)
 }
 
+CombineScenarios <- function(path_name, directory_names){
+  local <- read.csv(paste0(path_name,directory_names[1],"/metrics-local.csv"), skip=1, stringsAsFactors=F)
+  lines_proposed <- readShapeLines(paste0(path_name,directory_names[1], "/networks-proposed.shp"))
+  
+  #establish alhpa-numeric codes to prefix ID and FIDS 
+  prefix <- letters[1]
+  #so the IDs and FIDs are not conflicting, non-unique
+  lines_proposed <- spChFIDs(lines_proposed, paste0(prefix, lines_proposed$FID))
+  lines_proposed$FID <- paste0(prefix,lines_proposed$FID)
+  lines_proposed$MVLineType <- "Proposed"
+  
+  #Develop ID field to map attributes to fortified shapeline 
+  lines_proposed@data$id <- rownames(lines_proposed@data)
+
+  proposed_combined <- lines_proposed 
+  local_combined <- local
+
+  
+  for (i in 2:length(directory_names)){
+    prefix <- letters[i]
+    #import the local and shapefiles of interest
+    lines_proposed <- readShapeLines(paste0(path_name,directory_names[i], "/networks-proposed.shp"))
+    # change their IDs so they don't conflict
+    lines_proposed <- spChFIDs(lines_proposed, paste0(prefix, lines_proposed$FID))
+    lines_proposed$FID <- paste0(prefix,lines_proposed$FID)
+    lines_proposed$MVLineType <- "Proposed"
+    #Develop ID field to map attributes to fortified shapeline 
+    lines_proposed@data$id <- rownames(lines_proposed@data)    
+    #combine to other proposed grids
+    proposed_combined <- rbind(proposed_combined, lines_proposed)
+
+    #combine metrics local to the other local files
+    local <- read.csv(paste0(path_name,directory_names[i],"/metrics-local.csv"), skip=1, stringsAsFactors=F)
+    local_combined <- rbind.fill(local, local_combined)
+
+  }
+    
+    #output the dataframe type file "lines"
+    output <- list(proposed_combined,local_combined)
+    return(output)
+    
+}
+
