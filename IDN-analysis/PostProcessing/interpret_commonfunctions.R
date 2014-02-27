@@ -127,7 +127,7 @@ summarize_metrics_local_MV5 <- function(local){
   
   return(local_agg)
 }
-9i
+
 
 ################################
 ####generating output tables####
@@ -278,14 +278,13 @@ grid.summary.corrected.existing <- function(local_agg, global, existing_grid, ex
                  "Total Initial cost for grid network (MV+LV)", 
                  "Total initial cost for MV grid network",
                  "Total initial cost for LV grid network", 
-                 "System discounted recurring cost",
                  "Total Annual Demand met by Grid", 
                  "Grid Settlements",
                  "Total Peak Demand")
 
-  Units <- c("km", "Households", "km", "Households", "$", "$", "$", "$", "kWh","Qty","kWp")
-  Total <- vector(mode="double",11)
-  per_HH <- vector(mode="double",11)
+  Units <- c("km", "Households", "km", "Households", "$", "$", "$", "kWh","Qty","kWp")
+  Total <- vector(mode="double",10)
+  per_HH <- vector(mode="double",10)
   data <- t(as.matrix(subset(x=local_agg,Metric...System == "grid")))
   
   Total[1] <- existing_grid
@@ -295,17 +294,16 @@ grid.summary.corrected.existing <- function(local_agg, global, existing_grid, ex
   Total[5] <- global[rownames(global) == "system (grid) system total external initial cost",] + global[rownames(global) == "system (grid) system total internal initial cost",]
   Total[6] <- global[rownames(global) == "system (grid) system total external initial cost",]
   Total[7] <- global[rownames(global) == "system (grid) system total internal initial cost",]
-  Total[8] <- global[rownames(global) == "system (grid) system total discounted cost",]
-  Total[9] <- as.numeric(data[rownames(data) == "sum_of_Demand...Projected.nodal.demand.per.year.kWh"])
-  Total[10] <- as.numeric(data[rownames(data) == "qty_of_settlements"])
-  Total[11] <- as.numeric(data[rownames(data) == "sum_of_Demand..peak....Projected.peak.nodal.demand.kW"])
+  Total[8] <- as.numeric(data[rownames(data) == "sum_of_Demand...Projected.nodal.demand.per.year.kWh"])
+  Total[9] <- as.numeric(data[rownames(data) == "qty_of_settlements"])
+  Total[10] <- as.numeric(data[rownames(data) == "sum_of_Demand..peak....Projected.peak.nodal.demand.kW"])
     
   Total <- as.numeric(Total)
   per_HH <- Total/Total[4]
   per_HH[c(4)] <- NA
   per_HH[1] <-Total[1]/existing_conections
   per_HH[2] <- NA
-  per_settlement <- Total/Total[10]
+  per_settlement <- Total/Total[9]
   per_settlement[c(1,2)] <- NA 
   grid.table <- data.frame(Indicator,Units,Total,per_HH,per_settlement)
   return(grid.table)
