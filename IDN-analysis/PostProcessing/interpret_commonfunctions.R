@@ -254,7 +254,7 @@ grid.summary <- function(local_agg, global){
   Total[3] <- as.numeric(data[rownames(data) == "sum_of_Demographics...Projected.household.count",])
   Total[4] <- global[rownames(global) == "system (grid) system total external initial cost",] + global[rownames(global) == "system (grid) system total internal initial cost",]
   Total[5] <- global[rownames(global) == "system (grid) system total external initial cost",]
-  Total[6] <- global[rownames(global) == "system (grid) system total internal initial cost",]
+  Total[6] <- as.numeric(data[rownames(data) == 'sum_of_System..grid....Internal.system.initial.cost'])
   Total[7] <- as.numeric(data[rownames(data) == 'sum_of_System..grid....Internal.system.recurring.cost.per.year'])
   Total[8] <- as.numeric(data[rownames(data) == "sum_of_Demand...Projected.nodal.demand.per.year.kWh"])
   Total[9] <- as.numeric(data[rownames(data) == "qty_of_settlements"])
@@ -293,7 +293,7 @@ grid.summary.corrected.existing <- function(local_agg, global, existing_grid, ex
   Total[4] <- as.numeric(data[rownames(data) == "sum_of_Demographics...Projected.household.count",])
   Total[5] <- global[rownames(global) == "system (grid) system total external initial cost",] + global[rownames(global) == "system (grid) system total internal initial cost",]
   Total[6] <- global[rownames(global) == "system (grid) system total external initial cost",]
-  Total[7] <- global[rownames(global) == "system (grid) system total internal initial cost",]
+  Total[7] <- as.numeric(data[rownames(data) == 'sum_of_System..grid....Internal.system.initial.cost'])
   Total[8] <- as.numeric(data[rownames(data) == "sum_of_Demand...Projected.nodal.demand.per.year.kWh"])
   Total[9] <- as.numeric(data[rownames(data) == "qty_of_settlements"])
   Total[10] <- as.numeric(data[rownames(data) == "sum_of_Demand..peak....Projected.peak.nodal.demand.kW"])
@@ -398,9 +398,10 @@ load.polylines <- function(directory_name) {
 }
 
 polyline.length.within <- function(local_df, directory_name) {
-  #local_df <- ternate
+  #local_df <- local
   #directory_name <- '~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/January-2014/62-TernateArea-MV5/'
   
+  #test_lines <- proposed_all
   test_lines <- importShapefile(paste0(directory_name,"/networks-existing"))
   
   #Mainly interested in polylines only within demographic dataset
@@ -526,7 +527,7 @@ CombineScenarios <- function(path_name, directory_names){
   #so the IDs and FIDs are not conflicting, non-unique
   lines_proposed <- spChFIDs(lines_proposed, paste0(prefix, lines_proposed$FID))
   lines_proposed$FID <- paste0(prefix,lines_proposed$FID)
-  lines_proposed$MVLineType <- "Proposed"
+  lines_proposed$MVLineType <- "Existing"
   
   #Develop ID field to map attributes to fortified shapeline 
   lines_proposed@data$id <- rownames(lines_proposed@data)
@@ -542,21 +543,58 @@ CombineScenarios <- function(path_name, directory_names){
     # change their IDs so they don't conflict
     lines_proposed <- spChFIDs(lines_proposed, paste0(prefix, lines_proposed$FID))
     lines_proposed$FID <- paste0(prefix,lines_proposed$FID)
-    lines_proposed$MVLineType <- "Proposed"
+    lines_proposed$MVLineType <- "Existing"
     #Develop ID field to map attributes to fortified shapeline 
     lines_proposed@data$id <- rownames(lines_proposed@data)    
     #combine to other proposed grids
     proposed_combined <- rbind(proposed_combined, lines_proposed)
 
-    #combine metrics local to the other local files
+#     #combine metrics local to the other local files
     local <- read.csv(paste0(path_name,directory_names[i],"/metrics-local.csv"), skip=1, stringsAsFactors=F)
     local_combined <- rbind.fill(local, local_combined)
 
   }
     
     #output the dataframe type file "lines"
-    output <- list(proposed_combined,local_combined)
-    return(output)
+
+  output <- vector(mode="list", 2)
+  output[[1]] <- proposed_combined
+  output[[2]] <- local_combined
+
+  return(output)
     
 }
 
+LoadIDNPolygons <- function(i){
+  
+  # #DESA POLYGONS
+  # #Now, let's incorporate some polygon shapefile polygons for background and references 
+  if (i ==1) {
+    # #Maluku Utara Polygons
+    malukuutara_polygon <- readShapePoly("~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPinputs/Dec2013-Preprocessing/Shapefiles/Maluku_Utara_with_Census_Data_+_PLN_Areas.shp")
+    #now let's make it more ggplottable and keep any attribute data 
+    malukuutara_polygon@data$id <- rownames(malukuutara_polygon@data)
+    malukuutara_polygon <- merge(malukuutara_polygon@data, fortify(malukuutara_polygon), by = 'id')
+    polygon<- malukuutara_polygon
+    
+  }else if (i == 2){
+    #Maluku Polygons 
+    maluku_polygon <- readShapePoly("~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPinputs/Dec2013-Preprocessing/Shapefiles/Maluku_with_Census_Data_+_PLN_Areas.shp")
+    #now let's make it more ggplottable and keep any attribute data 
+    maluku_polygon@data$id <- rownames(maluku_polygon@data)
+    maluku_polygon <- merge(maluku_polygon@data, fortify(maluku_polygon), by = 'id')
+    polygon <- maluku_polygon
+  } else if (i ==7) {
+    # #NTT Polygons: LOAD TIME ~3:55
+    ntt_polygon <- readShapePoly("~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPinputs/Dec2013-Preprocessing/Shapefiles/NTT_with_Census_Data_+_PLN_Areas.shp")
+    # #now let's make it more ggplottable and keep any attribute data 
+    ntt_polygon@data$id <- rownames(ntt_polygon@data)
+    ntt_polygon <- merge(ntt_polygon@data, fortify(ntt_polygon), by = 'id')
+    polygon <- ntt_polygon
+  }
+return(polygon)
+}
+
+  
+  
+  
