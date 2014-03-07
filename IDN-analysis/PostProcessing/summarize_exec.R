@@ -60,6 +60,7 @@ path_name <- low_demand_path_name
 directory_names <- low_demand_directory_names
 
 farsighted_all_metrics <- as.data.frame(NULL)
+farsighted_all_metrics_lite <- as.data.frame(NULL)
 
 i=1
 farsighted_all_metrics <- as.data.frame(NULL)
@@ -108,11 +109,11 @@ for (i in 1:length(directory_names)){
   global <- load.global(read.csv(paste0(directory_name,"/metrics-global.csv"),stringsAsFactors=F))
   
 
-  # #DESA POLYGONS
-polygon <- LoadIDNPolygons(i)
-  #Define more useful population catgories for project area polygons
-  polygon <- popbins(polygon)
-  
+#   # #DESA POLYGONS
+# polygon <- LoadIDNPolygons(i)
+#   #Define more useful population catgories for project area polygons
+#   polygon <- popbins(polygon)
+#   
 #   ### ~~~~~~~~~~~~~~DATA LOADED!~~~~~~~~~~~~~~~~~~~~~~~####
 #   
 #   ## ~ Plotting Maps
@@ -414,6 +415,34 @@ all_settlements_ranked$Phase[which(all_settlements_ranked$Metric...System == 'un
 
 all_settlements_ranked$Phase <- as.factor(all_settlements_ranked$Phase)
 
+# #Output a new shapefile with all the attirbute data of interest
+#remove multiple nodes on line segments
+metrics_local_with_sequence <- (farsighted_grid[which(!(duplicated(farsighted_grid$id))),])
+proposed_with_rollout <- merge(proposed, metrics_local_with_sequence, by.x = "FID", by.y = "id")
+writeLinesShape(proposed_with_rollout, paste0("~/Desktop/ProposedGrid-LowDemand/",
+                                              scenario_prefix,                
+                                              "networks-proposed-with-rollout.shp"))
+#farsighted_all_metrics <- rbind(farsighted_all_metrics_lite, all_settlements_ranked)
+farsighted_all_metrics_lite <- rbind(farsighted_all_metrics_lite, 
+                                     all_settlements_ranked[c("Name",
+                                                           'Phase',
+                                                           'dist',
+                                                           'Demand...Projected.nodal.demand.per.year',
+                                                           'Demand..household....Target.household.count',
+                                                           'PercentOfNewGridConnections',
+                                                           'far.sighted.sequence',
+                                                           'CumulativeHousesConnected.qty',
+                                                           'Pln_cabang',
+                                                           'Metric...System',
+                                                           'Ei_subarea',
+                                                           'Full_popul',
+                                                           'X','Y')])
+                                       
+write.csv(farsighted_all_metrics_lite, 
+          "~/Desktop/ProposedGrid-LowDemand/LowDemand-AllNodes-LiteOutputs.csv",
+          row.names=F)
+}
+
 
 # ##Output csv of it all with ranking and origin metrics local stuff
 # write.csv(farsighted_grid, paste0(directory_name,
@@ -427,185 +456,183 @@ all_settlements_ranked$Phase <- as.factor(all_settlements_ranked$Phase)
 # WriteXLS(c("grid_settlements_ranked", "standalone_systems"), 
 #          paste0(directory_name,"/",scenario_prefix,"ForCastalia-metrics-local-rollout-sequenced.xls"))
 
-#Now pass through everything, grid and non grid alike into single csv
-shared_column_names <- colnames(local)[which(colnames(local) %in% colnames(grid_settlements_ranked))]
-farsighted_all_combined <- merge(local, grid_settlements_ranked, by = shared_column_names, all.x=T, all.y=T)
-write.csv(farsighted_all_combined, paste0(directory_name,
-                                          "/",
-                                          scenario_prefix,
-                                          "metrics-local-rollout_sequence.csv"), row.names=F)
+# #Now pass through everything, grid and non grid alike into single csv
+# shared_column_names <- colnames(local)[which(colnames(local) %in% colnames(grid_settlements_ranked))]
+# farsighted_all_combined <- merge(local, grid_settlements_ranked, by = shared_column_names, all.x=T, all.y=T)
+# write.csv(farsighted_all_combined, paste0(directory_name,
+#                                           "/",
+#                                           scenario_prefix,
+#                                           "metrics-local-rollout_sequence.csv"), row.names=F)
+# 
+# 
+# #What does the rollout look like on Terrain map 
+# rollout_plot_GE <- ranked_plot_GE(farsighted_all_combined) + blank_theme()
+# ##My favorite plot
+# tiff(filename=paste0(directory_name,
+#                      "/",
+#                      scenario_prefix,                
+#                      "Output-Overview-Map-GE.tiff"), 
+#      width = width, height=width*aspect_ratio)
+# plot(rollout_plot_GE)
+# dev.off()
+# 
+# 
+# 
+# #Phase Bins already developed in the rollout sections, so let's aggregate by that
+# #Now we can summarize key metrics by phase
+# phase_summary <- ddply(grid_settlements_ranked, .(Phase), summarise, 
+#                        sum_of_Demand...Projected.nodal.demand.per.year = sum(Demand...Projected.nodal.demand.per.year, na.rm=T),
+#                        sum_of_Demand...Projected.nodal.discounted.demand = sum(Demand...Projected.nodal.discounted.demand, na.rm=T),
+#                        sum_of_Demand..peak....Projected.peak.nodal.demand = sum(Demand..peak....Projected.peak.nodal.demand, na.rm=T),
+#                        sum_of_Demand..household....Projected.household.demand.per.year = sum(Demand..household....Projected.household.demand.per.year, na.rm=T),
+#                        sum_of_System..grid....Internal.system.initial.cost = sum(System..grid....Internal.system.initial.cost, na.rm=T),
+#                        sum_of_System..grid....Installation.cost = sum(System..grid....Installation.cost,na.rm=T),
+#                        sum_of_System..grid....Low.voltage.line.equipment.cost = sum(System..grid....Low.voltage.line.equipment.cost, na.rm=T),
+#                        sum_of_System..grid....Transformer.cost = sum(System..grid....Transformer.cost, na.rm=T),
+#                        sum_of_System..grid....Internal.system.recurring.cost.per.year = sum(System..grid....Internal.system.recurring.cost.per.year, na.rm=T),
+#                        sum_of_System..grid....Electricity.cost.per.year = sum(System..grid....Electricity.cost.per.year, na.rm=T),
+#                        sum_of_System..grid....Transformer.operations.and.maintenance.cost.per.year = sum(System..grid....Transformer.operations.and.maintenance.cost.per.year, na.rm=T),
+#                        sum_of_System..grid....Transformer.replacement.cost.per.year = sum(System..grid....Transformer.replacement.cost.per.year, na.rm=T),
+#                        sum_of_System..grid....Internal.system.nodal.discounted.cost = sum(System..grid....Internal.system.nodal.discounted.cost, na.rm=T),
+#                        avg_of_System..grid....Internal.system.nodal.levelized.cost = mean(System..grid....Internal.system.nodal.levelized.cost, na.rm=T),
+#                        sum_of_Population = sum(Pop, na.rm=T), 
+#                        sum_of_Target_Households = sum(Demand..household....Target.household.count, na.rm=T), 
+#                        sum_of_Demand...Projected.nodal.demand.per.year = sum(Demand...Projected.nodal.demand.per.year, na.rm=T),
+#                        sum_of_installed_MV_network.m = sum(dist),
+#                        electrification_achieved = max(PercentElectrification)
+# )
+# write.csv(phase_summary, paste0(directory_name,
+#                                 "/",
+#                                 scenario_prefix,
+#                                 "PhaseSummaryofAnticipatedGridRollout.csv"), row.names=F)
+# 
+# #Develop Phase summaries on a per household level to come up with "average" metrics
+# phase_summary_perHH <- ddply(grid_settlements_ranked, .(Phase), summarise,
+#                              'Number of Households Connected (qty)' = sum(Demand..household....Target.household.count),
+#                              'Total Cost of Phase (USD Millions)' = (sum(System..grid....Internal.system.initial.cost) + sum(dist)*30)/1E6,
+#                              'Per HH Cost of Phase (USD)' = ((sum(System..grid....Internal.system.initial.cost) + sum(dist)*30) / 
+#                                                                sum(Demand..household....Target.household.count)),
+#                              'Total new MV Lines (kilometers)' = sum(dist)/1E3,
+#                              'Length of Network Installed per HH (meters)' = (sum(dist)/sum(Demand..household....Target.household.count)),
+#                              'Percent of Grid Connected Households Electrified' = max(PercentOfNewGridConnections)
+# )
+# write.csv(phase_summary_perHH, paste0(directory_name,
+#                                       "/",
+#                                       scenario_prefix,
+#                                       "PhaseSummaryofAnticipatedGridRollout-perHH-022614.csv"), row.names=F)
 
-
-#What does the rollout look like on Terrain map 
-rollout_plot_GE <- ranked_plot_GE(farsighted_all_combined) + blank_theme()
-##My favorite plot
-tiff(filename=paste0(directory_name,
-                     "/",
-                     scenario_prefix,                
-                     "Output-Overview-Map-GE.tiff"), 
-     width = width, height=width*aspect_ratio)
-plot(rollout_plot_GE)
-dev.off()
-
-
-
-#Phase Bins already developed in the rollout sections, so let's aggregate by that
-#Now we can summarize key metrics by phase
-phase_summary <- ddply(grid_settlements_ranked, .(Phase), summarise, 
-                       sum_of_Demand...Projected.nodal.demand.per.year = sum(Demand...Projected.nodal.demand.per.year, na.rm=T),
-                       sum_of_Demand...Projected.nodal.discounted.demand = sum(Demand...Projected.nodal.discounted.demand, na.rm=T),
-                       sum_of_Demand..peak....Projected.peak.nodal.demand = sum(Demand..peak....Projected.peak.nodal.demand, na.rm=T),
-                       sum_of_Demand..household....Projected.household.demand.per.year = sum(Demand..household....Projected.household.demand.per.year, na.rm=T),
-                       sum_of_System..grid....Internal.system.initial.cost = sum(System..grid....Internal.system.initial.cost, na.rm=T),
-                       sum_of_System..grid....Installation.cost = sum(System..grid....Installation.cost,na.rm=T),
-                       sum_of_System..grid....Low.voltage.line.equipment.cost = sum(System..grid....Low.voltage.line.equipment.cost, na.rm=T),
-                       sum_of_System..grid....Transformer.cost = sum(System..grid....Transformer.cost, na.rm=T),
-                       sum_of_System..grid....Internal.system.recurring.cost.per.year = sum(System..grid....Internal.system.recurring.cost.per.year, na.rm=T),
-                       sum_of_System..grid....Electricity.cost.per.year = sum(System..grid....Electricity.cost.per.year, na.rm=T),
-                       sum_of_System..grid....Transformer.operations.and.maintenance.cost.per.year = sum(System..grid....Transformer.operations.and.maintenance.cost.per.year, na.rm=T),
-                       sum_of_System..grid....Transformer.replacement.cost.per.year = sum(System..grid....Transformer.replacement.cost.per.year, na.rm=T),
-                       sum_of_System..grid....Internal.system.nodal.discounted.cost = sum(System..grid....Internal.system.nodal.discounted.cost, na.rm=T),
-                       avg_of_System..grid....Internal.system.nodal.levelized.cost = mean(System..grid....Internal.system.nodal.levelized.cost, na.rm=T),
-                       sum_of_Population = sum(Pop, na.rm=T), 
-                       sum_of_Target_Households = sum(Demand..household....Target.household.count, na.rm=T), 
-                       sum_of_Demand...Projected.nodal.demand.per.year = sum(Demand...Projected.nodal.demand.per.year, na.rm=T),
-                       sum_of_installed_MV_network.m = sum(dist),
-                       electrification_achieved = max(PercentElectrification)
-)
-write.csv(phase_summary, paste0(directory_name,
-                                "/",
-                                scenario_prefix,
-                                "PhaseSummaryofAnticipatedGridRollout.csv"), row.names=F)
-
-#Develop Phase summaries on a per household level to come up with "average" metrics
-phase_summary_perHH <- ddply(grid_settlements_ranked, .(Phase), summarise,
-                             'Number of Households Connected (qty)' = sum(Demand..household....Target.household.count),
-                             'Total Cost of Phase (USD Millions)' = (sum(System..grid....Internal.system.initial.cost) + sum(dist)*30)/1E6,
-                             'Per HH Cost of Phase (USD)' = ((sum(System..grid....Internal.system.initial.cost) + sum(dist)*30) / 
-                                                               sum(Demand..household....Target.household.count)),
-                             'Total new MV Lines (kilometers)' = sum(dist)/1E3,
-                             'Length of Network Installed per HH (meters)' = (sum(dist)/sum(Demand..household....Target.household.count)),
-                             'Percent of Grid Connected Households Electrified' = max(PercentOfNewGridConnections)
-)
-write.csv(phase_summary_perHH, paste0(directory_name,
-                                      "/",
-                                      scenario_prefix,
-                                      "PhaseSummaryofAnticipatedGridRollout-perHH-022614.csv"), row.names=F)
-
-##Prabhas' tips on bar graphs
-require(reshape2); require(stringr)
-
-## Comparing component costs of grid phases
-farsighted_some <- subset(grid_settlements_ranked, select=c("Phase", 
-                                                   "System..grid....Transformer.cost", 
-                                                   "System..grid....Installation.cost", 
-                                                   "System..grid....Low.voltage.line.equipment.cost", 
-                                                   "System..grid....Electricity.cost.per.year",
-                                                   "dist",
-                                                   "Demand..household....Target.household.count"))
-farsighted_some$MV.Wire.Costs <- farsighted_some$dist * 30
-
-farsighted_some_tall <- melt(farsighted_some, id.vars=c("Phase"),
-                             measure.vars=c("System..grid....Installation.cost", 
-                                            "System..grid....Low.voltage.line.equipment.cost", 
-                                            #"System..grid....Electricity.cost.per.year",
-                                            "System..grid....Transformer.cost",
-                                            "MV.Wire.Costs"
-                             ))
-
-# clean up names
-names(farsighted_some_tall) <- c("Phase", "Type", "Cost") 
-# clean up values
-levels(farsighted_some_tall$Type) <- str_replace_all(str_replace_all(levels(farsighted_some_tall$Type), "System..grid....", ""), "[.]", " ")  
-
-# PLOT!
-phase_costs <- ggplot(farsighted_some_tall, aes(x=Phase, y=Cost/1E6, fill=Type)) + 
-  geom_bar(stat='identity') +
-  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
-  labs(title = "Capital Costs Per Phase", x = "Phase", y="Total Phase Cost (USD Millions)", 
-       fill = "Cost Category") +
-  scale_fill_brewer(type="seq", palette="Blues")
-
-
-#Output Bar charts 
-tiff(filename=paste0(directory_name,"/TotalCost-Summary-Phased.tiff"))
-plot(phase_costs)
-dev.off()
-
-
-average_HH_per_Phase <- sum(grid_settlements_ranked$Demand..household....Target.household.count)/length(unique(farsighted_some$Phase))
-
-phase_costs_perHH <- ggplot(farsighted_some_tall, aes(x=Phase, y=Cost/average_HH_per_Phase, fill=Type)) + 
-  geom_bar(stat='identity') +
-  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
-  labs(title = "Capital Costs Per Phase Per Household", x = "Phase", y="Average Cost per Household (USD)", 
-       fill = "Cost Category")+
-  scale_fill_brewer(type="seq", palette="Blues")
-
-
-
-#Output Bar charts 
-tiff(filename=paste0(directory_name,"/TotalCost-Summary-Phased-PerHH.tiff"))
-plot(phase_costs_perHH)
-dev.off()
-
-# #Output a new shapefile with all the attirbute data of interest
-#remove multiple nodes on line segments
-metrics_local_with_sequence <- (farsighted_grid[which(!(duplicated(farsighted_grid$id))),])
-proposed_with_rollout <- merge(proposed, metrics_local_with_sequence, by.x = "FID", by.y = "id")
-writeLinesShape(proposed_with_rollout, paste0(directory_name,
-                                              "/",
-                                              scenario_prefix,                
-                                              "networks-proposed-with-rollout.shp"))
-
-
-
-## Comparing component costs of grid phases and standalone options 
-standalone_settlements <- subset(all_settlements_ranked, ((Phase == 'MiniGrid Systems')))
-
-minigrid_components <- subset(standalone_settlements, select=c("Phase", 
-                                                   "System..mini.grid....Generatation.installation.cost", 
-                                                   "System..mini.grid....Generation.system.cost", 
-                                                   "System..mini.grid....Low.voltage.line.equipment.cost", 
-                                                   "Distribution...Low.voltage.line.initial.cost",
-                                                   "Demand..household....Target.household.count"))
-
-minigrid_components_tall <- melt(minigrid_components, id.vars=c("Phase"),
-                             measure.vars=c("System..mini.grid....Generatation.installation.cost", 
-                                            "System..mini.grid....Generation.system.cost", 
-                                            'System..mini.grid....Low.voltage.line.equipment.cost',
-                                            "Distribution...Low.voltage.line.initial.cost"
-                             ))
-
-# clean up names
-names(minigrid_components_tall) <- c("Phase", "Type", "Cost") 
-# clean up values
-levels(minigrid_components_tall$Type) <- str_replace_all(str_replace_all(levels(minigrid_components_tall$Type), "System..grid....", ""), "[.]", " ")  
-
-mg_phase_costs <- ggplot(minigrid_components_tall, aes(x=Phase, y=Cost, fill=Type)) + 
-  geom_bar(stat='identity') +
-  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
-  labs(title = "Capital Costs Per Phase", x = "Phase", y="Total Phase Cost (USD)", 
-       fill = "Cost Category") +
-  scale_fill_brewer(type="seq", palette="Reds")
-
-mg_houses = sum(standalone_settlements$Demand..household....Target.household.count)
-minigrid_components_tall$CostPerHH <- minigrid_components_tall$Cost/mg_houses
-
-mg_phase_costs_perHH <- ggplot(minigrid_components_tall, aes(x=Phase, y=Cost/mg_houses, fill=Type)) + 
-  geom_bar(stat='identity') +
-  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
-  labs(title = "MiniGrid Costs for 703 kWh Annual Demand", y="Total Capital Cost (USD)", 
-       fill = "Cost Category") +
-  scale_fill_brewer(type="seq", palette="Reds")
-#Output MiniGrid Cost breakdwon charts 
-tiff(filename=paste0(directory_name,"/MiniGrid-Costs-PerHH.tiff"))
-plot(mg_phase_costs_perHH)
-dev.off()
-
-
-
-}
+# ##Prabhas' tips on bar graphs
+# require(reshape2); require(stringr)
+# 
+# ## Comparing component costs of grid phases
+# farsighted_some <- subset(grid_settlements_ranked, select=c("Phase", 
+#                                                    "System..grid....Transformer.cost", 
+#                                                    "System..grid....Installation.cost", 
+#                                                    "System..grid....Low.voltage.line.equipment.cost", 
+#                                                    "System..grid....Electricity.cost.per.year",
+#                                                    "dist",
+#                                                    "Demand..household....Target.household.count"))
+# farsighted_some$MV.Wire.Costs <- farsighted_some$dist * 30
+# 
+# farsighted_some_tall <- melt(farsighted_some, id.vars=c("Phase"),
+#                              measure.vars=c("System..grid....Installation.cost", 
+#                                             "System..grid....Low.voltage.line.equipment.cost", 
+#                                             #"System..grid....Electricity.cost.per.year",
+#                                             "System..grid....Transformer.cost",
+#                                             "MV.Wire.Costs"
+#                              ))
+# 
+# # clean up names
+# names(farsighted_some_tall) <- c("Phase", "Type", "Cost") 
+# # clean up values
+# levels(farsighted_some_tall$Type) <- str_replace_all(str_replace_all(levels(farsighted_some_tall$Type), "System..grid....", ""), "[.]", " ")  
+# 
+# # PLOT!
+# phase_costs <- ggplot(farsighted_some_tall, aes(x=Phase, y=Cost/1E6, fill=Type)) + 
+#   geom_bar(stat='identity') +
+#   theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
+#   labs(title = "Capital Costs Per Phase", x = "Phase", y="Total Phase Cost (USD Millions)", 
+#        fill = "Cost Category") +
+#   scale_fill_brewer(type="seq", palette="Blues")
+# 
+# 
+# #Output Bar charts 
+# tiff(filename=paste0(directory_name,"/TotalCost-Summary-Phased.tiff"))
+# plot(phase_costs)
+# dev.off()
+# 
+# 
+# average_HH_per_Phase <- sum(grid_settlements_ranked$Demand..household....Target.household.count)/length(unique(farsighted_some$Phase))
+# 
+# phase_costs_perHH <- ggplot(farsighted_some_tall, aes(x=Phase, y=Cost/average_HH_per_Phase, fill=Type)) + 
+#   geom_bar(stat='identity') +
+#   theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
+#   labs(title = "Capital Costs Per Phase Per Household", x = "Phase", y="Average Cost per Household (USD)", 
+#        fill = "Cost Category")+
+#   scale_fill_brewer(type="seq", palette="Blues")
+# 
+# 
+# 
+# #Output Bar charts 
+# tiff(filename=paste0(directory_name,"/TotalCost-Summary-Phased-PerHH.tiff"))
+# plot(phase_costs_perHH)
+# dev.off()
+# 
+# 
+# 
+# 
+# ## Comparistng component costs of grid phases and standalone options 
+# standalone_settlements <- subset(all_settlements_ranked, ((Phase == 'MiniGrid Systems')))
+# 
+# minigrid_components <- subset(standalone_settlements, select=c("Phase", 
+#                                                    "System..mini.grid....Generation.installation.cost", 
+#                                                    #"System..mini.grid....Generatation.installation.cost",
+#                                                    "System..mini.grid....Generation.system.cost", 
+#                                                    "System..mini.grid....Low.voltage.line.equipment.cost", 
+#                                                    "Distribution...Low.voltage.line.initial.cost",
+#                                                    "Demand..household....Target.household.count"))
+# 
+# names(minigrid_components)[2] <- 'System..mini.grid....Generatation.installation.cost'
+# 
+# minigrid_components_tall <- melt(minigrid_components, id.vars=c("Phase"),
+#                              measure.vars=c("Distribution...Low.voltage.line.initial.cost",
+#                                             'System..mini.grid....Low.voltage.line.equipment.cost',
+#                                             "System..mini.grid....Generation.system.cost",                                         
+#                                "System..mini.grid....Generatation.installation.cost"
+#                                             #"System..mini.grid....Generation.installation.cost", 
+#                                             
+#                              ))
+# 
+# # clean up names
+# names(minigrid_components_tall) <- c("Phase", "Type", "Cost") 
+# # clean up values
+# levels(minigrid_components_tall$Type) <- str_replace_all(str_replace_all(levels(minigrid_components_tall$Type), "System..grid....", ""), "[.]", " ")  
+# 
+# mg_phase_costs <- ggplot(minigrid_components_tall, aes(x=Phase, y=Cost, fill=Type)) + 
+#   geom_bar(stat='identity') +
+#   theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
+#   labs(title = "Capital Costs Per Phase", x = "Phase", y="Total Phase Cost (USD)", 
+#        fill = "Cost Category") +
+#   scale_fill_brewer(type="seq", palette="Reds")
+# 
+# mg_houses = sum(standalone_settlements$Demand..household....Target.household.count)
+# minigrid_components_tall$CostPerHH <- minigrid_components_tall$Cost/mg_houses
+# 
+# mg_phase_costs_perHH <- ggplot(test2, aes(x=Phase, y=CostPerHH, fill=Type)) + 
+#   geom_bar(stat='identity') +
+#   theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
+#   labs(title = "MiniGrid Costs", y="Total Capital Cost per HH (USD)", 
+#        fill = "Cost Category") +
+#   scale_fill_brewer(type="seq", palette="Reds")
+# 
+# #Output MiniGrid Cost breakdwon charts 
+# png(filename=paste0(directory_name,"/MultiDemand-MiniGrid-Costs-PerHH.png"))
+# plot(mg_phase_costs_perHH)
+# dev.off()
+# 
+# 
+# 
+# }
 
 # # 
 # # #Evaluating 375m buffer process to subset settlements already grid connected
