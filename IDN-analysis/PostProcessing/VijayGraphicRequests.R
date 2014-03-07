@@ -130,9 +130,9 @@ plot_adjminigrid_costcurve <-
   
 
 ##Pull the 175kWp capacity
-minigrid_costcurve175 <- subset(adj_minigrid_costcurve, PeakDemand.kW == 175)
+minigrid_costcurve250 <- subset(adj_minigrid_costcurve, PeakDemand.kW == 250)
 
-minigrid_costcurve175_tall <- melt(minigrid_costcurve175, id.vars=c("PeakDemand.kW"),
+minigrid_costcurve250_tall <- melt(minigrid_costcurve250, id.vars=c("PeakDemand.kW"),
                                 measure.vars=c("distribution.low.voltage.line.equipment.cost.per.connection", 
                                                "Distribution...Low.voltage.line.initial.cost", 
                                                "System..mini.grid....Generation.system.cost",
@@ -140,19 +140,19 @@ minigrid_costcurve175_tall <- melt(minigrid_costcurve175, id.vars=c("PeakDemand.
 
 
 
-names(minigrid_costcurve175_tall) <- c("SystemCapacity.kWp", "Component", "Cost")
+names(minigrid_costcurve250_tall) <- c("SystemCapacity.kWp", "Component", "Cost")
 
-plot_minigrid_cost175   <- 
-  ggplot(data= minigrid_costcurve175_tall, aes(x=SystemCapacity.kWp, y=Cost, fill=Component)) + 
+plot_minigrid_cost250   <- 
+  ggplot(data= minigrid_costcurve250_tall, aes(x=SystemCapacity.kWp, y=Cost, fill=Component)) + 
   geom_bar(stat='identity', width=.20) +
   theme(axis.ticks=element_blank(), 
         panel.grid=element_blank(),
         panel.background=element_blank(),
         text=element_text(size=15),
         legend.text = element_text(size=15),
-        axis.text = element_text(size=15))+  #,
-        #legend.position=c(0,1), #x=0=left, y=1=top
-        #legend.justification=c(0,1)) +
+        axis.text = element_text(size=15),  #,
+        legend.position=c(0,1), #x=0=left, y=1=top
+        legend.justification=c(0,1)) +
   labs(title = "MiniGrid for 240 kWh/yr HH Demand", 
        x = "Capacity Installed per Household (W)", 
        y="Total Capital Cost per HH (USD)", 
@@ -164,8 +164,8 @@ plot_minigrid_cost175   <-
                              "BOS, Racking + Installation Cost"))+
   ylim(0,1500)
 
-ggsave(plot=plot_minigrid_cost175, filename="~/Desktop/MultiDemand-MiniGrid-Costs-PerHH.pdf")
-ggsave(plot=plot_minigrid_cost175, filename="~/Desktop/MultiDemand-MiniGrid-Costs-PerHH.png")
+ggsave(plot=plot_minigrid_cost250, filename="~/Desktop/MultiDemand-MiniGrid-Costs-PerHH.pdf")
+ggsave(plot=plot_minigrid_cost250, filename="~/Desktop/MultiDemand-MiniGrid-Costs-PerHH.png")
 
 
 ####################
