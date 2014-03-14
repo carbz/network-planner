@@ -30,7 +30,7 @@ minigrid_variables <- as.data.frame(t(as.numeric(inputs2[c('distribution - low v
 #                                 
 #Establish range of capacity values 
 
-minigrid_capacities <- seq(0,750, by=25)
+minigrid_capacities <- seq(0,800, by=100)
 
 minigrid_costcurve <- (NULL)
 minigrid_costcurve$PeakDemand.kW <- minigrid_capacities
@@ -222,3 +222,138 @@ GridCosts_perHH <- c(GridCosts[c(1:4)],
                      GridCosts[c(5:length(GridCosts))]/GridCosts$Demand..household....Target.household.count)
 
 write.csv(GridCosts_perHH, "~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/March-2014/Ternate-PerHHCosts-PerPhase.csv", row.names=F)
+
+
+####Settlement Densities by Bin 
+
+##Developing Bin Classifications
+local.binned <- all_settlements_ranked[c('Demographics...Projected.household.count',
+                                         'Metric...System', 
+                                         'Phase')]
+#Remove 0 populations, or NAs
+local.binned$Demographics...Projected.household.count[which(local.binned$Demographics...Projected.household.count==0)] <- NA
+
+###Bins by Equal HHs 
+#Sort local dataframe by HHold size
+local.binned <- ddply(local.binned, "Demographics...Projected.household.count")
+#add new column "HHcumsum" stores the cummulative count of HHolds
+local.binned$Demographics...Projected.household.count.HHcumsum <- 
+  cumsum(local.binned$Demographics...Projected.household.count)
+
+###summarize number of settlements in bins sized by equal number of Settlements-works
+#Determine HHsize/settlement breaks that split settlements into specified percentages
+HHoldBinsEqualSettlementQty <- quantile(local.binned$Demographics...Projected.household.count, 
+                                        probs = c(0, .2, .4, .6, .8, 1), na.rm=T)#break settlements into quantiles @ 20, 40, 60, 80 & 100%
+#Determine Settlement Bins                        
+local.binned$Demographics...Projected.household.count.SettlementBin <- 
+  cut(local.binned$Demographics...Projected.household.count, 
+      breaks = HHoldBinsEqualSettlementQty, 
+      include.lowest = TRUE,
+      labels = paste('<', HHoldBinsEqualSettlementQty[2:length(HHoldBinsEqualSettlementQty)]))
+
+HHoldBins_EqualSettlements = ggplot() + 
+  geom_bar(data = local.binned, aes(x=Demographics...Projected.household.count.SettlementBin, fill=Metric...System)) +
+  scale_fill_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) +
+  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
+  labs(title = "Households per Settlement - Equal Settlements per Bin", x = "Desnity Bin of Households/Settlement", y="Number of Settlements", color = "Electrification Tech.")
+
+
+#Output Bar charts 
+tiff(filename=paste0(directory_name,"/HouseHolds_per_settlement-withNAs.tiff"))
+plot(HHoldBins_EqualSettlements)
+dev.off()
+HHoldBins_EqualSettlements
+
+#for posterity's sake, output csv with other bin categories defiend 
+
+##Assign bins to original dataset based on fixed predefined thresholds for households/settlement - works
+local.binned$Demographics...Projected.household.count.predefinedbin <- 
+  cut(local.binned$Demographics...Projected.household.count, 
+      c(0, 11, 21, 51, 101, 250, 501, 1000, Inf),
+      labels = paste('<', c(11, 21, 51, 101, 250, 501, 1000, Inf)))
+
+PresetBins = ggplot() + 
+  geom_bar(data = local.binned, aes(x=Demographics...Projected.household.count.predefinedbin, 
+                                    fill=Phase)) +
+  scale_fill_manual(values = c('#08519c',
+                               '#3182bd',
+                               '#6baed6',
+                               '#bdd7e7',
+                               '#eff3ff',
+                               "#d7191c", "#abdda4", "#ffffbf"))+ 
+  # labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) +
+  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
+  labs(title = "Households per Settlement - preset Bins", x = "Desnity Bin of Households/Settlement", y="Number of Settlements", color = "Electrification Tech.")
+PresetBins
+
+
+PresetBins_withTransitionalMGs = ggplot() + 
+  geom_bar(data = local.binned, aes(x=Demographics...Projected.household.count.predefinedbin, 
+                                    fill=Phase)) +
+  scale_fill_manual(values = c('#08519c',
+                               '#3182bd',
+                               '#6baed6',
+                               '#bdd7e7',
+                               '#756bb1',
+                               "#d7191c", "#abdda4", "#ffffbf"),
+                    labels=c('1','2','3','4','MiniGrid*/ Future Grid', "MiniGrid", "Off Grid", "Pre-electrified")) +
+  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
+  labs(title = "Households per Settlement - preset Bins", x = "Desnity Bin of Households/Settlement", y="Number of Settlements", color = "Electrification Tech.")
+PresetBins_withTransitionalMGs
+
+
+#Output Bar charts 
+ggsave(plot=PresetBins, filename="~/Desktop/SettlementDensity-perPhase.pdf")
+ggsave(plot=PresetBins_withTransitionalMGs, filename="~/Desktop/SettlementDensity-perPhase-TransitionalMGs.pdf")
+
+##Get rid of pre-electrified areas
+local.binned <- subset(local.binned, (Demographics...Projected.household.count != 'NA'))
+
+PresetBins = ggplot() + 
+  geom_bar(data = local.binned, aes(x=Demographics...Projected.household.count.predefinedbin, 
+                                    fill=Phase)) +
+  scale_fill_manual(values = c('#08519c',
+                               '#3182bd',
+                               '#6baed6',
+                               '#bdd7e7',
+                               '#eff3ff',
+                               "#d7191c", "#abdda4", "#ffffbf"))+ 
+  # labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) +
+  theme(axis.ticks=element_blank(), 
+        panel.grid=element_blank(),
+        panel.background=element_blank(),
+        #         text=element_text(size=40),
+        #       legend.text = element_text(size=30),
+        #       axis.text = element_text(size=20),
+        legend.position=c(1,1), #x=0=left, y=1=top
+        legend.justification=c(1,1)) + #x=0
+  labs(title = "Households per Settlement - preset Bins", x = "Desnity Bin of Households/Settlement", y="Number of Settlements", color = "Electrification Tech.")
+PresetBins
+
+
+PresetBins_withTransitionalMGs = ggplot() + 
+  geom_bar(data = local.binned, aes(x=Demographics...Projected.household.count.predefinedbin, 
+                                    fill=Phase)) +
+  scale_fill_manual(values = c('#08519c',
+                               '#3182bd',
+                               '#6baed6',
+                               '#bdd7e7',
+                               '#756bb1',
+                               "#d7191c", "#abdda4", "#ffffbf"),
+                    labels=c('1','2','3','4','5', "MiniGrid", "Off Grid", "Pre-electrified")) +
+  theme(axis.ticks=element_blank(), 
+        panel.grid=element_blank(),
+        panel.background=element_blank(),
+        text=element_text(size=20, face="bold"),
+      legend.text = element_text(size=20, face="plain"),
+      axis.text = element_text(size=20),
+      legend.position=c(1,1), #x=0=left, y=1=top
+      legend.justification=c(1,1)) + #x=0
+  labs(title = "Number of Settlements per Household Density", x = "Desnity Bin of Households/Settlement", y="Number of Settlements", color = "Electrification Tech.")
+PresetBins_withTransitionalMGs
+
+#Output Bar charts 
+ggsave(plot=PresetBins, filename="~/Desktop/SettlementDensity-perPhase-NAs.pdf")
+ggsave(plot=PresetBins_withTransitionalMGs, filename="~/Desktop/SettlementDensity-perPhase-TransitionalMGs-NAs.pdf")
+
+
