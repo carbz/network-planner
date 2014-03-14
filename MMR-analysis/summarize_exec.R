@@ -1,6 +1,6 @@
-
+#no new lines here##
 require(gdata)
- require(plyr)
+require(plyr)
 require(stringr)
 require(data.table)
 require(ggplot2)
@@ -16,10 +16,10 @@ source('~/github/network-planner/Prioritized/Custom_Rollout_Functions.R')
 
 
 ##Develop input data for grid lenghts
-path_name <- "~/Downloads/"
+path_name <- "~/Dropbox/Myanmar_GIS/Modeling/Tests/"
 
-directory_names <- c("625",
-                     "626")
+directory_names <- c("625-Chin-1000HHDem-PopGr-NoDmdGr-LV15MV22-13c-SN10/",
+                     "626-Kayin-1000HHDem-PopGr-NoDmdGr-LV15MV22-13c-SN10//")
 
 i=2
 
@@ -30,7 +30,7 @@ for (i in 1:length(directory_names)){
   
   directory_name <- paste0(path_name, directory_names[i])
   scenario_prefix <- (directory_names[i])
- 
+  
   # #Import metrics local for each island areas in the analysis
   # #metrics local is the key output file of each Network Planner scenario capturing nodal level information
   local <- read.csv(paste0(directory_name,"/metrics-local.csv"), skip=1, stringsAsFactors=F)
@@ -46,7 +46,7 @@ for (i in 1:length(directory_names)){
   # #Import Metrics Gloabl stuff too, 
   global <- load.global(read.csv(paste0(directory_name,"/metrics-global.csv"),stringsAsFactors=F))
   
-  #Polygon data too, why not!
+#   #Polygon data too, why not!
 #   
 #   MMR_polygon <- readShapePoly("~/Dropbox/Myanmar_GIS/Admin_Boundaries/MMR_adm/MMR_adm3.shp")
 #   #     #now let's make it more ggplottable and keep any attribute data 
@@ -58,7 +58,7 @@ for (i in 1:length(directory_names)){
 #   
 #   #Define more useful population catgories for project area polygons
 #   polygon <- popbins(polygon)
-  
+#   
 #   ### ~~~~~~~~~~~~~~DATA LOADED!~~~~~~~~~~~~~~~~~~~~~~~####
 #   
 #   # Plotting Maps
@@ -66,11 +66,11 @@ for (i in 1:length(directory_names)){
 #   #all bells and whistles.  This is a comprehensive plot of information for which we can subtract/add more information in the future.
 #   #Thanks @prabhasp!
 #     
-#   #Explicitly define the plot regions of interest based on NP outputs and BPS Polygon data
-#   big_picture_plot <- comprehensive_plot(polygon, grid_lines, local) + blank_theme() 
-#   big_picture_plot
-#   
-# 
+#  #Explicitly define the plot regions of interest based on NP outputs and BPS Polygon data
+#  big_picture_plot <- comprehensive_plot(polygon, grid_lines, local) + blank_theme() 
+#  big_picture_plot
+  
+
   #Aspect Ratio: height to width
   aspect_ratio <- (max(local$Y)-min(local$Y))/(max(local$X)-min(local$X))
   width <- 1050 #desired pixel width of image outputs
@@ -112,156 +112,6 @@ grid <- grid.summary(local_agg, global)
   all_systems_summary <- rbind(grid, mg, og) 
   WriteXLS("all_systems_summary",paste0(directory_name,"/MetricsLocal-SingleSheetSummary.xls"))
   
-##Developing Bin Classifications
-local.binned <- local[c('Demographics...Projected.household.count',
-                       'Metric...System')]
-#Remove 0 populations, or NAs
-local.binned$Demographics...Projected.household.count[which(local.binned$Demographics...Projected.household.count==0)] <- NA
-
-###Bins by Equal HHs 
-#Sort local dataframe by HHold size
-local.binned <- ddply(local.binned, "Demographics...Projected.household.count")
-#add new column "HHcumsum" stores the cummulative count of HHolds
-local.binned$Demographics...Projected.household.count.HHcumsum <- 
-  cumsum(local.binned$Demographics...Projected.household.count)
-
-###summarize number of settlements in bins sized by equal number of Settlements-works
-#Determine HHsize/settlement breaks that split settlements into specified percentages
-HHoldBinsEqualSettlementQty <- quantile(local.binned$Demographics...Projected.household.count, 
-                                        probs = c(0, .2, .4, .6, .8, 1), na.rm=T)#break settlements into quantiles @ 20, 40, 60, 80 & 100%
-#Determine Settlement Bins                        
-local.binned$Demographics...Projected.household.count.SettlementBin <- 
-  cut(local.binned$Demographics...Projected.household.count, 
-      breaks = HHoldBinsEqualSettlementQty, 
-      include.lowest = TRUE,
-      labels = paste('<', HHoldBinsEqualSettlementQty[2:length(HHoldBinsEqualSettlementQty)]))
-
-HHoldBins_EqualSettlements = ggplot() + 
-  geom_bar(data = local.binned, aes(x=Demographics...Projected.household.count.SettlementBin, 
-                             fill=Metric...System)) +
-  scale_fill_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) +
-  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
-  labs(title = paste(scenario_prefix, "- Households per Settlement - Equal Settlements per Bin"), 
-       x = "Desnity Bin of Households/Settlement", 
-       y="Number of Settlements", 
-       color = "Electrification Tech.")
-  
-#Output Bar charts 
-  tiff(filename=paste0(directory_name,"/HouseHolds_per_settlement-withNAs.tiff"))
-  plot(HHoldBins_EqualSettlements)
-  dev.off()
-HHoldBins_EqualSettlements
-
-#for posterity's sake, output csv with other bin categories defiend 
-
-##Assign bins to original dataset based on fixed predefined thresholds for households/settlement - works
-local.binned$Demographics...Projected.household.count.predefinedbin <- 
-  cut(local.binned$Demographics...Projected.household.count, 
-      c(0, 11, 21, 51, 101, 250, 501, 1000, Inf),
-      labels = paste('<', c(11, 21, 51, 101, 250, 501, 1000, Inf)))
-
-PresetBins = ggplot() + 
-  geom_bar(data = local.binned, aes(x=Demographics...Projected.household.count.predefinedbin, 
-                                    fill=Metric...System)) +
-  scale_fill_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) +
-  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
-  labs(title = paste(scenario_prefix,"- Households per Settlement - preset Bins"), 
-       x = "Desnity Bin of Households/Settlement", 
-       y="Number of Settlements", 
-       color = "Electrification Tech.")
-PresetBins
-
-#Output Bar charts 
-tiff(filename=paste0(directory_name,"/HouseHolds_per_settlement-presetBins-withNAs.tiff"))
-plot(PresetBins)
-dev.off()
-
-###Bins by Equal HHs Successful Attempt - Works!
-#add new column "HHcumsum" stores the cummulative count of HHolds
-local.binned$Demographics...Projected.household.count.HHcumsum <- 
-  cumsum(local.binned$Demographics...Projected.household.count)
-#add new column "HHBin" and assign bins of 10 parts
-bin.count <- 10  #defining number of bins desired
-local.binned$Demographics...Projected.household.count.HHbin <- 
-  cut(local.binned$Demographics...Projected.household.count.HHcumsum, 
-      breaks = seq(0, sum(local.binned$Demographics...Projected.household.count, na.rm=T), 
-                   by=sum(local.binned$Demographics...Projected.household.count, na.rm=T)/10))
-
-EqualHHCounts = ggplot() + 
-  geom_bar(data = local.binned, aes(x=Demographics...Projected.household.count.HHbin, 
-                                    fill=Metric...System)) +
-  scale_fill_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) +
-  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
-  labs(title = paste(scenario_prefix,"- Households per Settlement - Equal Households per Bin"), 
-       x = "Desnity Bin of Households/Settlement", 
-       y="Number of Settlements", 
-       color = "Electrification Tech.")
-#Output Bar charts 
-tiff(filename=paste0(directory_name,"/HouseHolds_per_settlement-BinsWithEqualHH-withNAs.tiff"))
-plot(EqualHHCounts)
-dev.off()
-
-##summarize number of HHolds (sum) and number of settlements (AKA observations/nobs) per bin as was originally done in Excel for scenario 230
-##still needs work if want cross-comparison... 
-##Specify the Bin categories of ClustHouseholds(Edwin did in original 230 analysis) 
-local.binned$Clusthhold.bin.OriginalMethod <- 
-  cut(local.binned$Demographics...Projected.household.count, c(1, 10, 20, 50, 100, 250, 500, 1000, Inf))
-
-write.csv(local.binned, paste0(directory_name,
-                                  "/",
-                                  scenario_prefix,
-                                  "metrics-local-HHold-bins.csv"), row.names=F) 
-
-
-#Plot these guys and remove NA values AKA pre-electrified areas 
-local.binned <- subset(local.binned, (Demographics...Projected.household.count != 'NA'))
-##Regeneratre Bar Charts now
-EqualHHCounts = ggplot() + 
-  geom_bar(data = local.binned, aes(x=Demographics...Projected.household.count.HHbin, 
-                                    fill=Metric...System)) +
-  scale_fill_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) +
-  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
-  labs(title = paste(scenario_prefix,"- Households per Settlement - Equal Households per Bin"),
-       x = "Desnity Bin of Households/Settlement",
-       y="Number of Settlements",
-       color = "Electrification Tech.")
-#Output Bar charts 
-tiff(filename=paste0(directory_name,"/HouseHolds_per_settlement-BinsWithEqualHH.tiff"))
-plot(EqualHHCounts)
-dev.off()
-
-PresetBins = ggplot() + 
-  geom_bar(data = local.binned, aes(x=Demographics...Projected.household.count.predefinedbin, 
-                                    fill=Metric...System)) +
-  scale_fill_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) +
-  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
-  labs(title = paste(scenario_prefix,"- Households per Settlement - Preset Bins"), 
-       x = "Desnity Bin of Households/Settlement",
-       y="Number of Settlements",
-       color = "Electrification Tech.")
-#Output Bar charts 
-tiff(filename=paste0(directory_name,"/HouseHolds_per_settlement-presetBins.tiff"))
-plot(PresetBins)
-dev.off()
-
-HHoldBins_EqualSettlements = ggplot() + 
-  geom_bar(data = local.binned, aes(x=Demographics...Projected.household.count.SettlementBin, 
-                                    fill=Metric...System)) +
-  scale_fill_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) +
-  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
-  labs(title = paste(scenario_prefix,"- Households per Settlement - Equal Settlements per Bin"), 
-       x = "Desnity Bin of Households/Settlement", 
-       y="Number of Settlements", 
-       color = "Electrification Tech.")
-
-#Output Bar charts 
-tiff(filename=paste0(directory_name,"/HouseHolds_per_settlement.tiff"))
-plot(HHoldBins_EqualSettlements)
-dev.off()
-
-
-  
-
   # Rollout 
   #If all that stuff works, let's suggest a sequence in which to roll out the construction of grid-nodes.  This has been pre-developed and we're reapplying here 
   #Importing proposed grid by itself, no existing lines as well
@@ -347,10 +197,29 @@ dev.off()
   # Binning Categories
   #It can be useful to sort the NP results of settlement data by bins.  Ex, phases for construction, technology by settlement size, cost buckets, etc. 
   
+
+
+###################
+#~~~~~~~~~~~~~~~~
+####################
+
+
+
 # #Output 'lite' version of metrics local
 shared_column_names <- colnames(local)[which(colnames(local) %in% colnames(farsighted_grid))]
 farsighted_all <- merge(local, farsighted_grid, by = shared_column_names, all.x=F, all.y=T)
 farsighted_all_metrics <- merge(local, farsighted_grid, by = shared_column_names, all.x=T, all.y=T)
+
+grid_settlements_ranked <- merge(local, farsighted_grid, by = shared_column_names, all.x=F, all.y=T)
+
+all_settlements_ranked <- merge(local, farsighted_grid, by = shared_column_names, all.x=T, all.y=T)
+
+all_settlements_ranked$Phase <- as.character(all_settlements_ranked$Phase)
+all_settlements_ranked$Phase[which(all_settlements_ranked$Metric...System == 'mini-grid')] <- 'MiniGrid Systems'
+all_settlements_ranked$Phase[which(all_settlements_ranked$Metric...System == 'off-grid')] <- 'OffGrid Systems'
+all_settlements_ranked$Phase[which(all_settlements_ranked$Metric...System == 'unelectrified')] <- 'Pre-Electrified'
+
+all_settlements_ranked$Phase <- as.factor(all_settlements_ranked$Phase)
 
 ##Output csv of it all with ranking and origin metrics local stuff
 write.csv(farsighted_grid, paste0(directory_name,
@@ -364,6 +233,175 @@ grid_settlements_ranked <- farsighted_all
 
 WriteXLS(c("grid_settlements_ranked", "standalone_systems"), 
          paste0(directory_name,"/",scenario_prefix,"ForCastalia-metrics-local-rollout-sequenced.xls"))
+
+
+##Developing Bin Classifications
+local.binned <- all_settlements_ranked[c('Demand..household....Target.household.count',
+                        'Metric...System',
+                        'Phase')]
+#Remove 0 populations, or NAs
+local.binned$Demand..household....Target.household.count[which(local.binned$Demand..household....Target.household.count==0)] <- NA
+
+###Bins by Equal HHs 
+#Sort local dataframe by HHold size
+local.binned <- ddply(local.binned, "Demand..household....Target.household.count")
+#add new column "HHcumsum" stores the cummulative count of HHolds
+local.binned$Demographics...Projected.household.count.HHcumsum <- 
+  cumsum(local.binned$Demand..household....Target.household.count)
+
+###summarize number of settlements in bins sized by equal number of Settlements-works
+#Determine HHsize/settlement breaks that split settlements into specified percentages
+HHoldBinsEqualSettlementQty <- quantile(local.binned$Demand..household....Target.household.count, 
+                                        probs = c(0, .2, .4, .6, .8, 1), na.rm=T)#break settlements into quantiles @ 20, 40, 60, 80 & 100%
+#Determine Settlement Bins                        
+local.binned$Demographics...Projected.household.count.SettlementBin <- 
+  cut(local.binned$Demand..household....Target.household.count, 
+      breaks = HHoldBinsEqualSettlementQty, 
+      include.lowest = TRUE,
+      labels = paste('<', HHoldBinsEqualSettlementQty[2:length(HHoldBinsEqualSettlementQty)]))
+
+HHoldBins_EqualSettlements = ggplot() + 
+  geom_bar(data = local.binned, aes(x=Demographics...Projected.household.count.SettlementBin, 
+                                    fill=Metric...System)) +
+  scale_fill_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) +
+  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
+  labs(title = paste(scenario_prefix, "- Households per Settlement - Equal Settlements per Bin"), 
+       x = "Desnity Bin of Households/Settlement", 
+       y="Number of Settlements", 
+       color = "Electrification Tech.")
+
+#for posterity's sake, output csv with other bin categories defiend 
+
+##Assign bins to original dataset based on fixed predefined thresholds for households/settlement - works
+local.binned$Demographics...Projected.household.count.predefinedbin <- 
+  cut(local.binned$Demand..household....Target.household.count, 
+      c(0, 11, 21, 51, 101, 250, 501, 1000, Inf),
+      labels = paste('<', c(11, 21, 51, 101, 250, 501, 1000, Inf)))
+
+PresetBins = ggplot() + 
+  geom_bar(data = local.binned, aes(x=Demographics...Projected.household.count.predefinedbin, 
+                                    fill=Metric...System)) +
+  scale_fill_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) +
+  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
+  labs(title = paste(scenario_prefix,"- Households per Settlement - preset Bins"), 
+       x = "Desnity Bin of Households/Settlement", 
+       y="Number of Settlements", 
+       color = "Electrification Tech.")
+PresetBins
+
+PresetBinsbyPhase = ggplot() + 
+  geom_bar(data = local.binned, aes(x=Demographics...Projected.household.count.predefinedbin, 
+                                    fill=Phase)) +
+  scale_fill_manual(values = c('#08519c',
+                               '#3182bd',
+                               '#6baed6',
+                               '#bdd7e7',
+                               '#eff3ff',
+                               "#d7191c", "#abdda4", "#ffffbf"))+ 
+  # labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) +
+  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
+  labs(title = paste(scenario_prefix,"- Households per Settlement - preset Bins"), 
+       x = "Desnity Bin of Households/Settlement", 
+       y="Number of Settlements", 
+       color = "Electrification Tech.")
+PresetBinsbyPhase
+
+#Output Bar charts 
+tiff(filename=paste0(directory_name,"/HouseHolds_per_settlement-presetBins-withNAs.tiff"))
+plot(PresetBins)
+dev.off()
+
+#Output Bar charts 
+tiff(filename=paste0(directory_name,"/HouseHolds_per_settlement-presetBins-withNAs.tiff"))
+plot(PresetBinsbyPhase)
+dev.off()
+
+###Bins by Equal HHs Successful Attempt - Works!
+#add new column "HHcumsum" stores the cummulative count of HHolds
+local.binned$Demographics...Projected.household.count.HHcumsum <- 
+  cumsum(local.binned$Demand..household....Target.household.count)
+#add new column "HHBin" and assign bins of 10 parts
+bin.count <- 10  #defining number of bins desired
+local.binned$Demographics...Projected.household.count.HHbin <- 
+  cut(local.binned$Demographics...Projected.household.count.HHcumsum, 
+      breaks = seq(0, sum(local.binned$Demand..household....Target.household.count, na.rm=T), 
+                   by=sum(local.binned$Demand..household....Target.household.count, na.rm=T)/10))
+
+EqualHHCounts = ggplot() + 
+  geom_bar(data = local.binned, aes(x=Demographics...Projected.household.count.HHbin, 
+                                    fill=Metric...System)) +
+  scale_fill_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) +
+  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
+  labs(title = paste(scenario_prefix,"- Households per Settlement - Equal Households per Bin"), 
+       x = "Desnity Bin of Households/Settlement", 
+       y="Number of Settlements", 
+       color = "Electrification Tech.")
+#Output Bar charts 
+tiff(filename=paste0(directory_name,"/HouseHolds_per_settlement-BinsWithEqualHH-withNAs.tiff"))
+plot(EqualHHCounts)
+dev.off()
+
+##summarize number of HHolds (sum) and number of settlements (AKA observations/nobs) per bin as was originally done in Excel for scenario 230
+##still needs work if want cross-comparison... 
+##Specify the Bin categories of ClustHouseholds(Edwin did in original 230 analysis) 
+local.binned$Clusthhold.bin.OriginalMethod <- 
+  cut(local.binned$Demand..household....Target.household.count, c(1, 10, 20, 50, 100, 250, 500, 1000, Inf))
+
+write.csv(local.binned, paste0(directory_name,
+                               "/",
+                               scenario_prefix,
+                               "metrics-local-HHold-bins.csv"), row.names=F) 
+
+
+#Plot these guys and remove NA values AKA pre-electrified areas 
+local.binned <- subset(local.binned, (Demand..household....Target.household.count != 'NA'))
+##Regeneratre Bar Charts now
+EqualHHCounts = ggplot() + 
+  geom_bar(data = local.binned, aes(x=Demographics...Projected.household.count.HHbin, 
+                                    fill=Metric...System)) +
+  scale_fill_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) +
+  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
+  labs(title = paste(scenario_prefix,"- Households per Settlement - Equal Households per Bin"),
+       x = "Desnity Bin of Households/Settlement",
+       y="Number of Settlements",
+       color = "Electrification Tech.")
+#Output Bar charts 
+tiff(filename=paste0(directory_name,"/HouseHolds_per_settlement-BinsWithEqualHH.tiff"))
+plot(EqualHHCounts)
+dev.off()
+
+PresetBins = ggplot() + 
+  geom_bar(data = local.binned, aes(x=Demographics...Projected.household.count.predefinedbin, 
+                                    fill=Metric...System)) +
+  scale_fill_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) +
+  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
+  labs(title = paste(scenario_prefix,"- Households per Settlement - Preset Bins"), 
+       x = "Desnity Bin of Households/Settlement",
+       y="Number of Settlements",
+       color = "Electrification Tech.")
+#Output Bar charts 
+tiff(filename=paste0(directory_name,"/HouseHolds_per_settlement-presetBins.tiff"))
+plot(PresetBins)
+dev.off()
+
+HHoldBins_EqualSettlements = ggplot() + 
+  geom_bar(data = local.binned, aes(x=Demographics...Projected.household.count.SettlementBin, 
+                                    fill=Metric...System)) +
+  scale_fill_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) +
+  theme(axis.ticks=element_blank(), panel.grid=element_blank(),panel.background=element_blank()) +
+  labs(title = paste(scenario_prefix,"- Households per Settlement - Equal Settlements per Bin"), 
+       x = "Desnity Bin of Households/Settlement", 
+       y="Number of Settlements", 
+       color = "Electrification Tech.")
+
+#Output Bar charts 
+tiff(filename=paste0(directory_name,"/HouseHolds_per_settlement.tiff"))
+plot(HHoldBins_EqualSettlements)
+dev.off()
+
+###################
+#~~~~~~~~~~~~~~~~
+####################
 
 #Now pass through everything, grid and non grid alike into single csv
 shared_column_names <- colnames(local)[which(colnames(local) %in% colnames(farsighted_all))]
