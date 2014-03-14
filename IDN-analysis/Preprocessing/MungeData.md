@@ -20,7 +20,7 @@ require(stringr)
 require(ggplot2)
 library(knitr)
 
-source("~/github/local/network-planner//IDN-analysis//Preprocessing/DataMungingFunctions.R")
+source("~/github/network-planner//IDN-analysis//Preprocessing/DataMungingFunctions.R")
 ```
 
 
@@ -31,72 +31,72 @@ Jonathan developed a shapefiles of centroids for each and every Desa (Village) i
 
 
 ```r
-setwd("~/github/local/network-planner/IDN-analysis/Preprocessing/")
+setwd('~/github/network-planner/IDN-analysis/Preprocessing/')
 
-NTT_Centroids <- readShapePoints("Shapefiles/NTT_centroids.shp")
-NTT_Centroids <- as.data.frame(NTT_Centroids)
-# Renames 'EI_Subarea' variable name in NTT to agree with other Provinces
-NTT_Centroids <- rename(NTT_Centroids, replace = c(EI_subarea = "EI_SubArea"))
+NTT_Centroids <- readShapePoints("Shapefiles/NTT_centroids_20140205.shp")
+NTT_Centroids <- as.data.frame(NTT_Centroids) 
+#Renames 'EI_Subarea' variable name in NTT to agree with other Provinces
+NTT_Centroids <- rename(NTT_Centroids, replace=c("EI_subarea"="EI_SubArea"))
 
 Maluku_Centroids <- readShapePoints("Shapefiles/Maluku-Desa_centroids.shp")
 MalukuUtara_Centroids <- readShapePoints("Shapefiles/Maluku_Utara-Desa_centroids.shp")
 
-# Combine all shapefiles of centroids into single dataframe
-all_centroids <- rbind.fill(as.data.frame(NTT_Centroids), as.data.frame(Maluku_Centroids), 
-    as.data.frame(MalukuUtara_Centroids))
+#Combine all shapefiles of centroids into single dataframe 
+all_centroids <- rbind.fill(as.data.frame(NTT_Centroids),
+                            as.data.frame(Maluku_Centroids),
+                            as.data.frame(MalukuUtara_Centroids))
 
-# rename lat, long columns to better agree with NP nomenclature
-all_centroids <- rename(all_centroids, replace = c(coords.x1 = "Longitude", 
-    coords.x2 = "Latitude"))
+#rename lat, long columns to better agree with NP nomenclature
+all_centroids <- rename(all_centroids, replace=c("coords.x1"="Longitude",
+                                                 "coords.x2"="Latitude"))
 
-# establish a unique cluster code for Desa centroid locations for faster
-# indexing
-all_centroids$Clust_Code <- str_c(all_centroids$IDSP2010, "99")
+#establish a unique cluster code for Desa centroid locations for faster indexing
+all_centroids$Clust_Code <- str_c(all_centroids$IDSP2010,"99")
 all_centroids$Name <- all_centroids$Clust_Code
-# Establish X,Y Data Source Variable to track origin of data
+#Establish X,Y Data Source Variable to track origin of data 
 all_centroids$XY_Source <- "BPS_Centroids"
 
-### DATA DIRTY integrity issue with Centroids file is resolved here certain
-### desas are composed of multi-polygons and therefore have multiple
-### observations reported specifically, the following desas have repeat,
-### non-unqiue, centroid observations.
-Repeat_Desas = c(530901001299, 810602002199, 820306200199, 820402200299, 820506000199)
+###DATA DIRTY
+#integrity issue with Centroids file is resolved here
+#certain desas are composed of multi-polygons and therefore have multiple observations reported
+#specifically, the following desas have repeat, non-unqiue, centroid observations.  
+Repeat_Desas = c(530901001299,
+                 810602002199, 
+                 820306200199, 
+                 820402200299, 
+                 820506000199)
 
-multiple_centroid_desas <- all_centroids[which(all_centroids$Clust_Code %in% 
-    Repeat_Desas), ]
+multiple_centroid_desas <- all_centroids[which(all_centroids$Clust_Code %in% Repeat_Desas),]
 
-# use loop to select first occurence of each repeat Desa centroid in
-# 'consolidate_multiples' df
+#use loop to select first occurence of each repeat Desa centroid in 'consolidate_multiples' df
 consolidate_multiples <- as.data.frame(NULL)
-for (i in 1:length(Repeat_Desas)) {
-    first_of_repeats <- all_centroids[which(all_centroids$Clust_Code == Repeat_Desas[i]), 
-        ][1, ]
-    consolidate_multiples <- rbind.fill(consolidate_multiples, first_of_repeats)
-}
-## omit the the repeats for now because they're causing complications and I
-## dont know which single one to select to include
-all_centroids <- all_centroids[which(!(all_centroids$Clust_Code %in% multiple_centroid_desas$Clust_Code)), 
-    ]
-# now add back in only the first of each repeated Desa Centroid
-all_centroids <- rbind.fill(all_centroids, consolidate_multiples)
+for (i in 1:length(Repeat_Desas)){
+  first_of_repeats <- all_centroids[which(all_centroids$Clust_Code == Repeat_Desas[i]),][1,]
+  consolidate_multiples <- rbind.fill(consolidate_multiples,
+                                      first_of_repeats)
+  }
+##omit the the repeats for now because they're causing complications and I dont know which single one to select to include
+all_centroids <- all_centroids[which(!(all_centroids$Clust_Code %in% multiple_centroid_desas$Clust_Code)),]
+#now add back in only the first of each repeated Desa Centroid 
+all_centroids <- rbind.fill(all_centroids,
+                            consolidate_multiples)
 
 
-# seperate out the cluster location w and without hhold size
-centroids_w_hosize <- (all_centroids[((all_centroids$NUM_HHOLDS) != 0), ])
-centroids_wout_hosize <- (all_centroids[((all_centroids$NUM_HHOLDS) == 0), ])
-# use average of all clusters' household size for the missing instances
-centroids_wout_hosize$NUM_HHOLDS <- mean(all_centroids$NUM_HHOLDS, na.rm = T)
-# now redefine cluster dataframe such that all observations have a ho_size
-# defined
+#seperate out the cluster location w and without hhold size
+centroids_w_hosize <- (all_centroids[((all_centroids$NUM_HHOLDS)!=0),])
+centroids_wout_hosize <- (all_centroids[((all_centroids$NUM_HHOLDS)==0),])
+#use average of all clusters' household size for the missing instances
+centroids_wout_hosize$NUM_HHOLDS <- mean(all_centroids$NUM_HHOLDS, na.rm=T)
+#now redefine cluster dataframe such that all observations have a ho_size defined
 all_centroids <- rbind(centroids_w_hosize, centroids_wout_hosize)
 
 
-### DATA Cleaned
+###DATA Cleaned
 
-# Name column for unique cluster code for faster indexing
+#Name column for unique cluster code for faster indexing
 row.names(all_centroids) <- all_centroids$Clust_Code
-# Preview Dataframe structure
-head(all_centroids, n = 1L)
+#Preview Dataframe structure
+head(all_centroids, n=1L)
 ```
 
 ```
@@ -120,26 +120,59 @@ head(all_centroids, n = 1L)
 
 ```r
 
-# Establish PLN_Cabang variable
-missing_PLN_Cabanag <- subset(all_centroids[which(is.na(all_centroids$PLN_Cabang)), 
-    ])
+#Establish PLN_Cabang variable
+missing_PLN_Cabanag <- subset(all_centroids[which(is.na(all_centroids$PLN_Cabang)),])
 missing_PLN_Cabanag$PLN_Cabang <- missing_PLN_Cabanag$EI_SubArea
 
-has_PLN_Cabanag <- subset(all_centroids[which(!(is.na(all_centroids$PLN_Cabang))), 
-    ])
+has_PLN_Cabanag <- subset(all_centroids[which(!(is.na(all_centroids$PLN_Cabang))),])
 
 all_centroids <- rbind(has_PLN_Cabanag, missing_PLN_Cabanag)
 
 
-# Output plot of All Centroids
-ggplot(all_centroids, aes(x = Longitude, y = Latitude)) + geom_point(colour = "blue") + 
-    labs(title = "BPS Centroids") + coord_equal()
+#Also establish a blank_theme template from Prabhas' recommendations 
+blank_theme <- function() {
+  theme(#axis.text=element_blank(), axis.title=element_blank(), 
+        axis.ticks=element_blank(),
+        panel.grid=element_blank(),
+        panel.background=element_blank())
+  }
+
+
+google_earth_plot <- function(points) {
+  
+  ##This returns the left/bottom/right/top bounding box points 
+  #of a given X, Y point set
+  #names(location) <- c("left","bottom","right","top")
+  loc <- c(min(points$Longitude), #left 
+           min(points$Latitude), #bottom
+           max(points$Longitude), #right
+           max(points$Latitude)) #top
+  map <- get_map(location= loc)
+  
+  p <- ggmap(map, legend = "topleft") + 
+             geom_point(data=points, aes(x = Longitude, y = Latitude), colour = 'blue') +
+             coord_equal()
+  
+  return(p)
+  }
+
+#Output plot of All Centroids
+ggplot(all_centroids, aes(x = Longitude, y = Latitude))+ 
+  geom_point(colour = 'blue') + 
+  labs(title = "BPS Centroids") + 
+  coord_equal() +
+  blank_theme()
 ```
 
 ![plot of chunk ImportData](figure/ImportData.png) 
 
 ```r
 
+google_earth_plot(all_centroids)
+```
+
+```
+## Error: could not find function "get_map"
 ```
 
 
@@ -322,35 +355,91 @@ desa_gap_fillers$EI_SubArea <- as.character(desa_gap_fillers$EI_SubArea)  #addre
 
 # now merge two existing datasets
 composite_settlements <- rbind.fill(cluster_points, desa_gap_fillers)
+```
+
+```
+## Error: could not find function "rbind.fill"
+```
+
+```r
 # Get rid of some redundancy
 composite_settlements$X <- NULL
+```
+
+```
+## Error: object 'composite_settlements' not found
+```
+
+```r
 composite_settlements$Y <- NULL
+```
+
+```
+## Error: object 'composite_settlements' not found
+```
+
+```r
 
 # target household penetration rate needs to be considered
 composite_settlements[which(is.na(composite_settlements$TOT_HHOLD)), "TOT_HHOLD"] <- composite_settlements[which(is.na(composite_settlements$TOT_HHOLD)), 
     "NUM_HHOLDS"]
+```
+
+```
+## Error: object 'composite_settlements' not found
+```
+
+```r
 composite_settlements <- mutate(composite_settlements, target_household_penetration_rate = (1 - 
     PLN_HHOLD))
+```
+
+```
+## Error: could not find function "mutate"
+```
+
+```r
 
 # Deraste the population by the target penetration factor
 composite_settlements$pop <- composite_settlements$pop * composite_settlements$target_household_penetration_rate
+```
+
+```
+## Error: object 'composite_settlements' not found
+```
+
+```r
 composite_settlements$full_population <- composite_settlements$population
+```
+
+```
+## Error: object 'composite_settlements' not found
+```
+
+```r
 composite_settlements$population <- NULL
+```
+
+```
+## Error: object 'composite_settlements' not found
+```
+
+```r
 
 ggplot(composite_settlements, aes(x = Longitude, y = Latitude)) + geom_point(aes(colour = XY_Source)) + 
     labs(title = "Composite View of Settlement Locations")
 ```
 
-![plot of chunk CompositeView_IDNSettlements](figure/CompositeView_IDNSettlements1.png) 
+```
+## Error: could not find function "ggplot"
+```
 
 ```r
 table(composite_settlements$XY_Source)
 ```
 
 ```
-## 
-## BIG_Settlements   BPS_Centroids 
-##           16825             667
+## Error: object 'composite_settlements' not found
 ```
 
 ```r
@@ -360,7 +449,9 @@ ggplot(composite_settlements, aes(x = Longitude, y = Latitude)) + geom_point(aes
     labs(title = "Geographic Divsions of Settlement Locations")
 ```
 
-![plot of chunk CompositeView_IDNSettlements](figure/CompositeView_IDNSettlements2.png) 
+```
+## Error: could not find function "ggplot"
+```
 
 ```r
 # Visual check on PLN Area Territories
@@ -368,8 +459,7 @@ summary(composite_settlements$EI_SubArea)
 ```
 
 ```
-##    Length     Class      Mode 
-##     17492 character character
+## Error: object 'composite_settlements' not found
 ```
 
 ```r
@@ -378,7 +468,9 @@ ggplot(composite_settlements, aes(x = Longitude, y = Latitude)) + geom_point(aes
     labs(title = "PLN Area Offices") + coord_equal()
 ```
 
-![plot of chunk CompositeView_IDNSettlements](figure/CompositeView_IDNSettlements3.png) 
+```
+## Error: could not find function "ggplot"
+```
 
 ```r
 
@@ -386,11 +478,7 @@ table(composite_settlements$PLN_Cabang)
 ```
 
 ```
-## 
-##       AMBON  Area Kupan   AreaSumba Cabang Tual  FloresBara  FloresTimu 
-##        1321        6208         966         606        4649        2207 
-##     Ternate 
-##        1535
+## Error: object 'composite_settlements' not found
 ```
 
 
@@ -400,43 +488,122 @@ Based on the granularity demanded to run electrification scenarios, we output a 
 
 
 ```r
-# #minimize variables passed through to bare neccessities df <-
-# subset(composite_settlements, select = c('Name', 'Latitude', 'Longitude',
-# 'pop', 'ho_size', 'EI_SubArea', 'PLN_Cabang', 'PROVINSI', 'XY_Source',
-# 'target_household_penetration_rate', 'full_population'))
-# composite_settlements <- df #Output entire field
-# write.csv(composite_settlements, '~/Dropbox/Indonesia Geospatial
-# Analysis/Data Modeling and
-# Analysis/NPinputs/Jan2014-Preprocessing/CompositeDemographicFile.csv',
-# row.names=F) #Output Geographic Area Division Regions <-
-# unique(composite_settlements$EI_SubArea) setwd('~/Dropbox/Indonesia
+# #minimize variables passed through to bare neccessities
+df <- subset(composite_settlements, select = c("Name", "Latitude", "Longitude", 
+    "pop", "ho_size", "EI_SubArea", "PLN_Cabang", "PROVINSI", "XY_Source", "target_household_penetration_rate", 
+    "full_population"))
+```
+
+```
+## Error: object 'composite_settlements' not found
+```
+
+```r
+composite_settlements <- df
+# #Output entire field write.csv(composite_settlements, '~/Dropbox/Indonesia
 # Geospatial Analysis/Data Modeling and
-# Analysis/NPinputs/Jan2014-Preprocessing/DemographicInputs-GeographicDivisions//')
-# for (i in 1:length(Regions)){ subset_area <- subset(composite_settlements,
-# EI_SubArea == Regions[i]) write.csv(subset_area,
-# str_c(Regions[i],'-demographic_data_with_centroids_for_gaps-20140122.csv'),
-# row.names = F) } flores <- c('FloresTimu', 'FloresBara') flores_subset <-
+# Analysis/NPinputs/Jan2014-Preprocessing/CompositeDemographicFile.csv',
+# row.names=F) Output Geographic Area Division
+Regions <- unique(composite_settlements$EI_SubArea)
+```
+
+```
+## Error: object of type 'closure' is not subsettable
+```
+
+```r
+setwd("~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPinputs/Feb2014-Preprocessing/DemographicInputs-GeographicDivisions//")
+for (i in 1:length(Regions)) {
+    subset_area <- subset(composite_settlements, EI_SubArea == Regions[i])
+    write.csv(subset_area, str_c(Regions[i], "-demographic_data_with_centroids_for_gaps-20140206.csv"), 
+        row.names = F)
+}
+```
+
+```
+## Error: object 'Regions' not found
+```
+
+```r
+# flores <- c('FloresTimu', 'FloresBara') flores_subset <-
 # subset(composite_settlements, EI_SubArea %in% flores)
 # write.csv(flores_subset,
-# 'Flores-demographic_data_with_centroids_for_gaps-20140114.csv', row.names
-# = F) #Output less granular subset setwd('~/Dropbox/Indonesia Geospatial
-# Analysis/Data Modeling and
-# Analysis/NPinputs/Jan2014-Preprocessing/DemographicInputs-PLN_Cabang/')
-# cabangs <- unique(composite_settlements$PLN_Cabang) for (i in
-# 1:length(cabangs)){ subset_area <- subset(composite_settlements,
-# PLN_Cabang == cabangs[i]) write.csv(subset_area,
-# str_c(cabangs[i],'-demographic_data_with_centroids_for_gaps-20140114.csv'),
-# row.names = F) } #If we wanted division by Provinces
-# setwd('~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and
-# Analysis/NPinputs/Jan2014-Preprocessing/DemographicInputs-Province/') NTT
-# <- subset(composite_settlements, PROVINSI == 'NUSA TENGGARA TIMUR')
-# write.csv(NTT, 'NTT-demographic_data_with_centroids_for_gaps.csv',
-# row.names = F) Maluku <- subset(composite_settlements, PROVINSI ==
-# 'MALUKU') write.csv(Maluku,
-# 'Maluku-demographic_data_with_centroids_for_gaps.csv', row.names = F)
-# MalukuUtara <- subset(composite_settlements, PROVINSI == 'MALUKU UTARA')
-# write.csv(MalukuUtara,
-# 'MalukuUtara-demographic_data_with_centroids_for_gaps.csv', row.names = F)
+# 'Flores-demographic_data_with_centroids_for_gaps-20140206.csv', row.names
+# = F)
 
+# Output less granular subset
+setwd("~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPinputs/Feb2014-Preprocessing/DemographicInputs-PLN_Cabang/")
+cabangs <- unique(composite_settlements$PLN_Cabang)
+```
+
+```
+## Error: object of type 'closure' is not subsettable
+```
+
+```r
+for (i in 1:length(cabangs)) {
+    subset_area <- subset(composite_settlements, PLN_Cabang == cabangs[i])
+    write.csv(subset_area, str_c(cabangs[i], "-demographic_data_with_centroids_for_gaps-20140206.csv"), 
+        row.names = F)
+}
+```
+
+```
+## Error: object 'cabangs' not found
+```
+
+```r
+
+
+# If we wanted division by Provinces
+setwd("~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPinputs/Feb2014-Preprocessing/DemographicInputs-Province/")
+NTT <- subset(composite_settlements, PROVINSI == "NUSA TENGGARA TIMUR")
+```
+
+```
+## Error: object 'PROVINSI' not found
+```
+
+```r
+write.csv(NTT, "NTT-demographic_data_with_centroids_for_gaps.csv", row.names = F)
+```
+
+```
+## Error: object 'NTT' not found
+```
+
+```r
+
+Maluku <- subset(composite_settlements, PROVINSI == "MALUKU")
+```
+
+```
+## Error: object 'PROVINSI' not found
+```
+
+```r
+write.csv(Maluku, "Maluku-demographic_data_with_centroids_for_gaps.csv", row.names = F)
+```
+
+```
+## Error: object 'Maluku' not found
+```
+
+```r
+
+MalukuUtara <- subset(composite_settlements, PROVINSI == "MALUKU UTARA")
+```
+
+```
+## Error: object 'PROVINSI' not found
+```
+
+```r
+write.csv(MalukuUtara, "MalukuUtara-demographic_data_with_centroids_for_gaps.csv", 
+    row.names = F)
+```
+
+```
+## Error: object 'MalukuUtara' not found
 ```
 

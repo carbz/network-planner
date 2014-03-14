@@ -19,7 +19,7 @@ require(stringr)
 require(ggplot2)
 library(knitr)
 
-source('~/github/local/network-planner//IDN-analysis//Preprocessing/DataMungingFunctions.R')
+source('~/github/network-planner//IDN-analysis//Preprocessing/DataMungingFunctions.R')
 
 ```
 
@@ -29,7 +29,7 @@ source('~/github/local/network-planner//IDN-analysis//Preprocessing/DataMungingF
 Jonathan developed a shapefiles of centroids for each and every Desa (Village) in our Indonesia project area.  We import that information to in case there is an absence of better location data.  
 
 ```{r ImportData, cache=TRUE, fig.width=8}
-setwd('~/github/local/network-planner/IDN-analysis/Preprocessing/')
+setwd('~/github/network-planner/IDN-analysis/Preprocessing/')
 
 NTT_Centroids <- readShapePoints("Shapefiles/NTT_centroids_20140205.shp")
 NTT_Centroids <- as.data.frame(NTT_Centroids) 
