@@ -127,7 +127,21 @@ google_earth_plot <- function(points) {
   
   p <- ggmap(map, legend = "topleft") + 
              geom_point(data=points, aes(x = Longitude, y = Latitude), colour = 'blue') +
-             coord_equal()
+             coord_equal() +
+      theme(axis.ticks=element_blank(), 
+        panel.grid=element_blank(),
+        panel.background=element_blank(),
+        text=element_text(size=20, face="bold"),
+      legend.text = element_text(size=20, face="plain"),
+      axis.text = element_text(size=20),
+      legend.position=c(1,1), #x=0=left, y=1=top
+      legend.justification=c(1,1))
+  
+  + #x=0
+  labs(title = "Number of Settlements per Household Density", x = "Desnity Bin of Households/Settlement", y="Number of Settlements", color = "Electrification Tech.")
+
+  
+  
   
   return(p)
   }
@@ -139,7 +153,7 @@ ggplot(all_centroids, aes(x = Longitude, y = Latitude))+
   coord_equal() +
   blank_theme()
 
-google_earth_plot(all_centroids)
+ge <- google_earth_plot(all_centroids)
 
 ```
 
