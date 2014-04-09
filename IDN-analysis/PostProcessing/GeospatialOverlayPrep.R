@@ -108,7 +108,7 @@ for (j in 1:length(scenarios)){
 
 
 #Load categorized 
-grid_ranked <- read.csv('~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Settlements-for-ElectrificationV20140408.csv')
+grid_ranked <- read.csv('~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Settlements-for-ElectrificationV20140409.csv')
 
 #combining sequenced grid settlements and non-grid points all together
 nongrid_settlements <- merge(metrics_local, rollout, by = 'Name',all=T)
@@ -142,7 +142,9 @@ all_settlements$Desa <- substr(all_settlements$Name,1,10)
 all_settlements <- all_settlements[with(all_settlements,order(seq_fs,Phase.C.5)),]
 allsettlements.desas <- ddply(all_settlements, c("Desa"), subset, Name==(Name)[1])
 
-WriteXLS("allsettlements.desas","~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Desas-CategorizedForStrategicGuidance-V20140409.xls")
-write.csv(allsettlements.desas,"~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Desas-CategorizedForStrategicGuidance-V20140409.csv")
+WriteXLS("allsettlements.desas","~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Desas-CategorizedForStrategicGuidance-V20140409V2.xls")
+write.csv(allsettlements.desas,"~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Desas-CategorizedForStrategicGuidance-V20140409V2.csv")
+
+WriteXLS("all_settlements","~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Settlements-CategorizedForStrategicGuidance-V20140409.xls")
 
 
