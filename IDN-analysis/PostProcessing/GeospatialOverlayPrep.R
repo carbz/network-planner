@@ -47,24 +47,30 @@ for (j in 1:length(scenarios)){
 all_settlements <- mutate(all_settlements, averageMVperHH =CumulativeMV/CumulativeHH,
                           MVperHH = dist.N.19.11/Demand..household....Target.household.count,
                           averageMVperHH_old = Cumulative/Cumulati_1)
-
+#Improve Labeling
+all_settlements$scenario <- as.character(all_settlements$scenario)
+all_settlements$scenario[which(all_settlements$scenario == 'AMBON')] <- 'Ambon'
+all_settlements$scenario[which(all_settlements$scenario == 'Area Kupan')] <- 'Kupang'
+all_settlements$scenario[which(all_settlements$scenario == 'AreaSumba')] <- 'Sumba'
+all_settlements$scenario[which(all_settlements$scenario == 'FloresBara')] <- 'Flores Barat'
+all_settlements$scenario[which(all_settlements$scenario == 'FloresTimu')] <- 'Flores Timur'
 
 #Write for XLS
 WriteXLS("all_settlements","~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Settlements-for-ElectrificationV20140408.xls")
 ## 
 
-h = c(12,15,18) # Y intercept Cutoff
+h = 12#c(12,15,18) # Y intercept Cutoff
 
 plot_pln_cabangs <- 
   ggplot(data= all_settlements, 
          aes(x=PercentOfN.N.19.15, 
              y=averageMVperHH, 
              colour = scenario)) +
-  geom_line() +
-  labs(title = "Cumulative Moving Average of MV Line Per Household", 
+  geom_line(size =3) +
+  labs(title = "Cumulative Average of MV Line Per Household", 
        x = "Percent of New Households Connected [%]", 
        y="MV Line [m/HH]", 
-       colour = "PLN Cabang") +
+       colour = "Geospatial Modeling Area") +
   theme(text=element_text(size=40),
         legend.text = element_text(size=30),
         axis.text = element_text(size=20),
@@ -73,8 +79,77 @@ plot_pln_cabangs <-
         panel.background=element_blank(),
         legend.position=c(0,1), #x=0=left, y=1=top
         legend.justification=c(0,1)) + 
-  geom_hline(yintercept=c(h,15,18), colour="#636363", linetype="dashed") 
+  geom_hline(yintercept=c(h), colour="#636363", linetype="dashed") #+
+  #geom_text(aes(0,h,label = h, vjust = -1))
 plot_pln_cabangs
+
+plot_pln_cabangs_cost <- 
+  ggplot(data= all_settlements, 
+         aes(x=PercentOfN.N.19.15, 
+             y=averageMVperHH*30, 
+             colour = scenario)) +
+  geom_line(size =3) +
+  labs(title = "Cumulative Average of MV Line Cost Per Household", 
+       x = "Percent of New Households Connected [%]", 
+       y="MV Line Cost per Household [$USD/HH]", 
+       colour = "Geospatial Modeling Area") +
+  theme(text=element_text(size=40),
+        legend.text = element_text(size=30),
+        axis.text = element_text(size=20),
+        axis.ticks=element_blank(), 
+        panel.grid=element_blank(),
+        panel.background=element_blank(),
+        legend.position=c(0,1), #x=0=left, y=1=top
+        legend.justification=c(0,1)) + 
+  geom_hline(yintercept=c(h*30), colour="#636363", linetype="dashed") #+
+#geom_text(aes(0,h,label = h, vjust = -1))
+plot_pln_cabangs_cost
+
+plot_pln_cabangs_HH <- 
+  ggplot(data= all_settlements, 
+         aes(x=CumulativeHH, 
+             y=averageMVperHH, 
+             colour = scenario)) +
+  geom_line(size =3) +
+  labs(title = "Cumulative Average of MV Line Per Household", 
+       x = "Number of Households Connected [qty]", 
+       y="MV Line [m/HH]", 
+       colour = "Geospatial Modeling Area") +
+  theme(text=element_text(size=40),
+        legend.text = element_text(size=30),
+        axis.text = element_text(size=20),
+        axis.ticks=element_blank(), 
+        panel.grid=element_blank(),
+        panel.background=element_blank(),
+        legend.position=c(1,1), #x=0=left, y=1=top
+        legend.justification=c(1,1)) + 
+  geom_hline(yintercept=c(h), colour="#636363", linetype="dashed") #+
+#geom_text(aes(0,h,label = h, vjust = -1))
+plot_pln_cabangs_HH
+
+plot_pln_cabangs_HHcost <- 
+  ggplot(data= all_settlements, 
+         aes(x=CumulativeHH, 
+             y=averageMVperHH*30, 
+             colour = scenario)) +
+  geom_line(size =3) +
+  labs(title = "Cumulative Average of MV Line Cost Per Household", 
+       x = "Percent of New Households Connected [%]", 
+       y="MV Line Cost per Household [$USD/HH]", 
+       colour = "Geospatial Modeling Area") +
+  theme(text=element_text(size=40),
+        legend.text = element_text(size=30),
+        axis.text = element_text(size=20),
+        axis.ticks=element_blank(), 
+        panel.grid=element_blank(),
+        panel.background=element_blank(),
+        legend.position=c(1,1), #x=0=left, y=1=top
+        legend.justification=c(1,1)) + 
+  geom_hline(yintercept=c(h*30), colour="#636363", linetype="dashed") 
+#geom_text(aes(0,h,label = h, vjust = -1))
+plot_pln_cabangs_HHcost
+
+
 
 #Determine the geospatial overlay categorization
 
@@ -146,5 +221,26 @@ WriteXLS("allsettlements.desas","~/Dropbox/Indonesia Geospatial Analysis/Data Mo
 write.csv(allsettlements.desas,"~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Desas-CategorizedForStrategicGuidance-V20140409V2.csv")
 
 WriteXLS("all_settlements","~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Settlements-CategorizedForStrategicGuidance-V20140409.xls")
+write.csv(all_settlements,"~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Settlements-CategorizedForStrategicGuidance-V20140409.csv")
 
+
+#bad
+Figure29 + geom_line(aes(group=factor(tradlib),size=2)) + facet_grid(regionsFull~., scales="free_y", labeller=reg_labeller) + scale_colour_brewer(type = "div") +
+  theme(axis.text.x = element_text(colour = 'black', angle = 90, size = 13, hjust = 0.5, vjust = 0.5),axis.title.x=element_blank()) + 
+  ylab("FSI (%Change)") + theme(axis.text.y = element_text(colour = 'black', size = 12), axis.title.y = element_text(size = 12, hjust = 0.5, vjust = 0.2)) + 
+  theme(strip.text.y = element_text(size = 11, hjust = 0.5, vjust = 0.5, face = 'bold'))
+
+#good
+Figure29 + geom_line(aes(group=factor(tradlib)),size=1) + facet_grid(regionsFull~., scales="free_y") + scale_colour_brewer(type = "div") +
+  theme(axis.text.x = element_text(colour = 'black', angle = 90, size = 13, hjust = 0.5, vjust = 0.5),axis.title.x=element_blank()) + 
+  ylab("FSI (%Change)") + theme(axis.text.y = element_text(colour = 'black', size = 12), axis.title.y = element_text(size = 12, hjust = 0.5, vjust = 0.2)) + 
+  theme(strip.text.y = element_text(size = 11, hjust = 0.5, vjust = 0.5, face = 'bold'))
+
+
+Figure29 <- ggplot(data=fsi.wht, aes(x=factor(sres),y=value,colour=factor(tradlib)))
+
+Figure29 + geom_line(aes(group=factor(tradlib),size=2)) + facet_grid(regionsFull~., scales="free_y", labeller=reg_labeller) + scale_colour_brewer(type = "div") +
+  theme(axis.text.x = element_text(colour = 'black', angle = 90, size = 13, hjust = 0.5, vjust = 0.5),axis.title.x=element_blank()) + 
+  ylab("FSI (%Change)") + theme(axis.text.y = element_text(colour = 'black', size = 12), axis.title.y = element_text(size = 12, hjust = 0.5, vjust = 0.2)) + 
+  theme(strip.text.y = element_text(size = 11, hjust = 0.5, vjust = 0.5, face = 'bold'))
 
