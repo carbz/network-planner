@@ -15,6 +15,8 @@ all_settlements <- merge(metrics_local, rollout, by = 'Name',all=T)
 #settlements outside 1km buffer
 all_settlements_1kmbuffer <- subset(all_settlements, Metric...System == 'grid')
 
+
+
 #Order by Cabang then sequence
 all_settlements <- all_settlements_1kmbuffer[with(all_settlements_1kmbuffer, order(Pln_cabang, seq_fs)),]
 
@@ -48,7 +50,7 @@ all_settlements <- mutate(all_settlements, averageMVperHH =CumulativeMV/Cumulati
 
 
 #Write for XLS
-WriteXLS("all_settlements_1kmbuffer","~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Settlements-for-Electrification.xls")
+WriteXLS("all_settlements","~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Settlements-for-ElectrificationV20140408.xls")
 ## 
 
 h = c(12,15,18) # Y intercept Cutoff
@@ -103,3 +105,44 @@ for (j in 1:length(scenarios)){
     cumsum(all_settlements$dist.N.19.11[which(all_settlements$scenario == scenarios[j])])
   
 }
+
+
+#Load categorized 
+grid_ranked <- read.csv('~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Settlements-for-ElectrificationV20140408.csv')
+
+#combining sequenced grid settlements and non-grid points all together
+nongrid_settlements <- merge(metrics_local, rollout, by = 'Name',all=T)
+nongrid_settlements <- subset(nongrid_settlements, Metric...System != 'grid')
+
+#Combine nongrid and on-grid all together
+all_settlements <- rbind.fill(grid_ranked, nongrid_settlements)
+
+NonGridFields <- c("Geospatial.Overlay...15m.Threshold",
+                   "Geospatial.Overlay...10m.Threshold",         
+                   "Geospatial.Overlay...12m.Threshold",
+                   "Geospatial.Overlay...18m.Threshold")   
+
+#Define phases as a factor to better mesh in the NAs when applicable 
+all_settlements$Phase <- as.factor(all_settlements$Phase)
+
+new_factors <- c(levels(all_settlements$Geospatial.Overlay...15m.Threshold),levels(all_settlements$Phase)) 
+
+levels(all_settlements$Geospatial.Overlay...15m.Threshold) <- new_factors
+levels(all_settlements$Geospatial.Overlay...10m.Threshold) <- new_factors
+levels(all_settlements$Geospatial.Overlay...12m.Threshold) <- new_factors
+levels(all_settlements$Geospatial.Overlay...18m.Threshold) <- new_factors
+
+#Replace NAs with original phase categorization 
+replacements<-  all_settlements[which(is.na(all_settlements$Geospatial.Overlay...15m.Threshold)),'Phase']        
+all_settlements[which(is.na(all_settlements$Geospatial.Overlay...15m.Threshold)),NonGridFields] <- replacements
+
+#Output Singular Desa Field
+all_settlements$Desa <- substr(all_settlements$Name,1,10)
+
+all_settlements <- all_settlements[with(all_settlements,order(seq_fs,Phase.C.5)),]
+allsettlements.desas <- ddply(all_settlements, c("Desa"), subset, Name==(Name)[1])
+
+WriteXLS("allsettlements.desas","~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Desas-CategorizedForStrategicGuidance-V20140409.xls")
+write.csv(allsettlements.desas,"~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Desas-CategorizedForStrategicGuidance-V20140409.csv")
+
+
