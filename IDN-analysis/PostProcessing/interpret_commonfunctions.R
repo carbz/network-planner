@@ -443,7 +443,8 @@ comprehensive_plot <- function(polygon, path, points) {
     geom_point(data=points, aes(x = X, y = Y, colour = Metric...System, shape = Xy_source)) +
     scale_shape_manual(values=c(20, 11), labels=c("BIG", "BPS")) +
     scale_color_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) + 
-    labs(title = paste0("NetworkPlanner Outputs: ",directory_names[i]), x = "Longitude", y="Latitude", color = "Electrification Tech.", shape = "Settlement Data Source") +
+    labs(title = paste0("NetworkPlanner Outputs: ",directory_names[i]), x = "Longitude", y="Latitude", color = "Electrification Tech.", shape = "Settlement Data Source")+
+    #coord_map()
     coord_equal(xlim=c(min(points$X),max(points$X)),ylim=c(min(points$Y),max(points$Y)))
   
 }

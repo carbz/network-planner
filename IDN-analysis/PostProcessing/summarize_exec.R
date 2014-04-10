@@ -107,66 +107,66 @@ proj4 <- read.csv(paste0(directory_name,"/metrics-local.csv"), nrows=1, header =
   global <- load.global(read.csv(paste0(directory_name,"/metrics-global.csv"),stringsAsFactors=F))
   
 
-#   # #DESA POLYGONS
-# polygon <- LoadIDNPolygons(i)
-#   #Define more useful population catgories for project area polygons
-#   polygon <- popbins(polygon)
-#   
-#   ### ~~~~~~~~~~~~~~DATA LOADED!~~~~~~~~~~~~~~~~~~~~~~~####
-#   
-#   ## ~ Plotting Maps
-#   #There are some useful maps we commonly generate.  Let's try to automate and streamline that here. 
-#   #all bells and whistles.  This is a comprehensive plot of information for which we can subtract/add more information in the future.
-#     
-#   #Explicitly define the plot regions of interest based on NP outputs and BPS Polygon data
-#   big_picture_plot <- comprehensive_plot(polygon, grid_lines, local) + blank_theme() 
-#   #Develop map with Google Background for better reference
-#   proposed_GE_background <- google_earth_plot(grid_lines, local)
-#   #Sample Plots
-#   big_picture_plot
-#   proposed_GE_background
-#   
-#   ## ~ Output Maps to directory 
-#   #Aspect Ratio: height to width
-#   aspect_ratio <- (max(local$Y)-min(local$Y))/(max(local$X)-min(local$X))
-#   width <- 1050 #desired pixel width of image outputs
-# 
-#   #My favorite plot
-#   png(filename=paste0(directory_name,"/Output-Overview-Map-20140226.png"), width = width, height=width*aspect_ratio)
-#   plot(big_picture_plot)
-#   dev.off()
-#   
-#   ##My favorite plot
-#   png(filename=paste0(directory_name,"/Output-Overview-Map-GEbackground.png"), width = width, height=width*aspect_ratio)
-#   plot(proposed_GE_background)
-#   dev.off()
+  # #DESA POLYGONS
+polygon <- LoadIDNPolygons(i)
+  #Define more useful population catgories for project area polygons
+  polygon <- popbins(polygon)
+  
+  ### ~~~~~~~~~~~~~~DATA LOADED!~~~~~~~~~~~~~~~~~~~~~~~####
+  
+  ## ~ Plotting Maps
+  #There are some useful maps we commonly generate.  Let's try to automate and streamline that here. 
+  #all bells and whistles.  This is a comprehensive plot of information for which we can subtract/add more information in the future.
+    
+  #Explicitly define the plot regions of interest based on NP outputs and BPS Polygon data
+  big_picture_plot <- comprehensive_plot(polygon, grid_lines, local) + blank_theme() 
+  #Develop map with Google Background for better reference
+  proposed_GE_background <- google_earth_plot(grid_lines, local)
+  #Sample Plots
+  big_picture_plot
+  proposed_GE_background
+  
+  ## ~ Output Maps to directory 
+  #Aspect Ratio: height to width
+  aspect_ratio <- (max(local$Y)-min(local$Y))/(max(local$X)-min(local$X))
+  width <- 1050 #desired pixel width of image outputs
+
+  #My favorite plot
+  png(filename=paste0(directory_name,"/Output-Overview-Map-20140226.png"), width = width, height=width*aspect_ratio)
+  plot(big_picture_plot)
+  dev.off()
+  
+  ##My favorite plot
+  png(filename=paste0(directory_name,"/Output-Overview-Map-GEbackground.png"), width = width, height=width*aspect_ratio)
+  plot(proposed_GE_background)
+  dev.off()
  
-#   # Summarize NP Output Data
-#   ##Here, we interpret basic consequence of the suggested network and try to express some useful metrics.
+  # Summarize NP Output Data
+  ##Here, we interpret basic consequence of the suggested network and try to express some useful metrics.
+
+  #Summarize outputs by technology type (ie Off-Grid, Mini-Grid and Grid systems)
+  summary <- summarize_metrics_local_MV5(local)
+
+  local_agg <- summary
+  #Determine Existing Grid stastics 
+  existing_length <- polyline.length.within(local, directory_name)
+  existing_pop <- sum(local$Full_population)
+  existing_houses <- sum((local$Full_population-local$Old_pop)/local$Ho_size)
+  
+  #Grid Summary
+grid<-grid.summary.corrected.existing(summary, global, existing_length, existing_houses)
+mg <- mini.grid.summary.MV5(local_agg)
+  og <- off.grid.summary(local_agg)
+  
+  options("scipen"=100, "digits"=2)
+  
+  all_systems_summary <- rbind(grid, mg, og) 
+#  WriteXLS("all_systems_summary","~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/February-2014/SensitivityAnalysis-480kWhDemand/Tual-Combined/Tual-MetricsLocal-MVMax5-SingleSheetSummary0221.xls")
 # 
-#   #Summarize outputs by technology type (ie Off-Grid, Mini-Grid and Grid systems)
-#   summary <- summarize_metrics_local_MV5(local)
-# 
-#   local_agg <- summary
-#   #Determine Existing Grid stastics 
-#   existing_length <- polyline.length.within(local, directory_name)
-#   existing_pop <- sum(local$Full_population)
-#   existing_houses <- sum((local$Full_population-local$Old_pop)/local$Ho_size)
-#   
-#   #Grid Summary
-# grid<-grid.summary.corrected.existing(summary, global, existing_length, existing_houses)
-# mg <- mini.grid.summary.MV5(local_agg)
-#   og <- off.grid.summary(local_agg)
-#   
-#   options("scipen"=100, "digits"=2)
-#   
-#   all_systems_summary <- rbind(grid, mg, og) 
-# #  WriteXLS("all_systems_summary","~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/February-2014/SensitivityAnalysis-480kWhDemand/Tual-Combined/Tual-MetricsLocal-MVMax5-SingleSheetSummary0221.xls")
-# # 
-# #   WriteXLS("all_systems_summary", str_c(directory_name,
-# #                                         "/",
-# #                                         scenario_prefix,
-# #                                         "MetricsLocal-MVMax5-SingleSheetSummary-VMrequest-0221.xls"))
+#   WriteXLS("all_systems_summary", str_c(directory_name,
+#                                         "/",
+#                                         scenario_prefix,
+#                                         "MetricsLocal-MVMax5-SingleSheetSummary-VMrequest-0221.xls"))
 
 ##Developing Bin Classifications
 local.binned <- all_settlements_ranked[c('Demographics...Projected.household.count',
