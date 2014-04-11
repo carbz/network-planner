@@ -181,6 +181,30 @@ for (j in 1:length(scenarios)){
   
 }
 
+#Plot total MV installed per region
+plot_pln_cabangs_MVline <- 
+  ggplot(data= all_settlements, 
+         aes(x=CumulativeHH, 
+             y=CumulativeMV/1000, 
+             colour = scenario)) +
+  geom_line(size =3) +
+  labs(title = "Cumulative Sum of MV Line and Households per Region", 
+       x = "Cumulative Households Connected [qty]", 
+       y="MV Line [km]", 
+       colour = "Geospatial Modeling Area") +
+  theme(text=element_text(size=40),
+        legend.text = element_text(size=30),
+        axis.text = element_text(size=20),
+        axis.ticks=element_blank(), 
+        panel.grid=element_blank(),
+        panel.background=element_blank(),
+        legend.position=c(0,1), #x=0=left, y=1=top
+        legend.justification=c(1,1)) + 
+  geom_abline(intercept = 0, slope = 12/1000, colour="#636363", linetype="dashed") + 
+  #geom_hline(yintercept=c(h), colour="#636363", linetype="dashed") #+
+  geom_text(aes(y=400,x=30000,label = '> 12 m/HH', angle = 20, vjust = -1))
+plot_pln_cabangs_MVline
+
 
 #Load categorized 
 grid_ranked <- read.csv('~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Settlements-for-ElectrificationV20140409.csv')
@@ -222,25 +246,4 @@ write.csv(allsettlements.desas,"~/Dropbox/Indonesia Geospatial Analysis/Data Mod
 
 WriteXLS("all_settlements","~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Settlements-CategorizedForStrategicGuidance-V20140409.xls")
 write.csv(all_settlements,"~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Settlements-CategorizedForStrategicGuidance-V20140409.csv")
-
-
-#bad
-Figure29 + geom_line(aes(group=factor(tradlib),size=2)) + facet_grid(regionsFull~., scales="free_y", labeller=reg_labeller) + scale_colour_brewer(type = "div") +
-  theme(axis.text.x = element_text(colour = 'black', angle = 90, size = 13, hjust = 0.5, vjust = 0.5),axis.title.x=element_blank()) + 
-  ylab("FSI (%Change)") + theme(axis.text.y = element_text(colour = 'black', size = 12), axis.title.y = element_text(size = 12, hjust = 0.5, vjust = 0.2)) + 
-  theme(strip.text.y = element_text(size = 11, hjust = 0.5, vjust = 0.5, face = 'bold'))
-
-#good
-Figure29 + geom_line(aes(group=factor(tradlib)),size=1) + facet_grid(regionsFull~., scales="free_y") + scale_colour_brewer(type = "div") +
-  theme(axis.text.x = element_text(colour = 'black', angle = 90, size = 13, hjust = 0.5, vjust = 0.5),axis.title.x=element_blank()) + 
-  ylab("FSI (%Change)") + theme(axis.text.y = element_text(colour = 'black', size = 12), axis.title.y = element_text(size = 12, hjust = 0.5, vjust = 0.2)) + 
-  theme(strip.text.y = element_text(size = 11, hjust = 0.5, vjust = 0.5, face = 'bold'))
-
-
-Figure29 <- ggplot(data=fsi.wht, aes(x=factor(sres),y=value,colour=factor(tradlib)))
-
-Figure29 + geom_line(aes(group=factor(tradlib),size=2)) + facet_grid(regionsFull~., scales="free_y", labeller=reg_labeller) + scale_colour_brewer(type = "div") +
-  theme(axis.text.x = element_text(colour = 'black', angle = 90, size = 13, hjust = 0.5, vjust = 0.5),axis.title.x=element_blank()) + 
-  ylab("FSI (%Change)") + theme(axis.text.y = element_text(colour = 'black', size = 12), axis.title.y = element_text(size = 12, hjust = 0.5, vjust = 0.2)) + 
-  theme(strip.text.y = element_text(size = 11, hjust = 0.5, vjust = 0.5, face = 'bold'))
 
