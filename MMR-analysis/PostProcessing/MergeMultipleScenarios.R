@@ -89,6 +89,7 @@ tiff(filename="carbajal_putzing/Output-Overview-Map-GEbackground.tiff")
 plot(proposed_GE_background)
 dev.off()
 
+ggsave(plot=proposed_GE_background, filename="carbajal_putzing/proposed_GE_background.png")
 
 comprehensive_plot <- function(polygon, path, points) {
   
@@ -107,10 +108,6 @@ comprehensive_plot <- function(polygon, path, points) {
   big_picture_plot <- comprehensive_plot(MMR_polygon, proposed_AB, local_all) + blank_theme() 
 
 big_picture_plot
- 
-#My favorite plot
-  tiff("carbajal_putzing/Output-Overview-Map.tiff")
-  plot(big_picture_plot)
-  dev.off()
+ggsave(plot=big_picture_plot, filename="carbajal_putzing/OutputOverView-Map.png")
 
 #Summarize outputs by technology type (ie Off-Grid, Mini-Grid and Grid systems)
