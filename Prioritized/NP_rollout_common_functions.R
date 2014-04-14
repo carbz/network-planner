@@ -242,15 +242,19 @@ preprocess.networkplanner.results <- function(local_df, shape.file, proj_var = p
   ghost.nodes <- arrange(ghost.nodes, id)
   
   #7.2 preserve unique branch & root codes originating from existing network 
-  candidate.nodes$branch <- ghost.nodes$branch
-  candidate.nodes$root <- ghost.nodes$branch
+  candidate.nodes$branch <- 1:length(candidate.nodes$root)
+  candidate.nodes$root <- 1:length(candidate.nodes$root)
   
   #7.3 remove candidate nodes from non.candidate nodes dataframe
   non.candidate.nodes <- subset(merged, !(id %in% ghost.nodes$id))
+  #7.4 remove unaccounted for ghost nodes
+  ghost.nodes <- subset(ghost.nodes, (id %in% candidate.nodes$id))
+  ghost.nodes.latlongs <- ghost.nodes[,1:2]
+  row.names(ghost.nodes.latlongs) <- seq_len(nrow(ghost.nodes.latlongs))
   
   ##8.0 Determine distance from ghost nodes (on existing network) to corresponding candidate vertices
   dist <-  dist_fun(candidate.nodes[,1:2],
-                    ghost.nodes[,1:2],
+                    ghost.nodes.latlongs,
                     proj_var)
   
   #*it is important to use dummy variable 'Settlement.id' to relate calculated distances to correct vertices
