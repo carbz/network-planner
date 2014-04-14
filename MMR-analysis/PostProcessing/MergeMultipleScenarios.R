@@ -36,15 +36,32 @@ localB$Vt_code <- NA
 shared_col_names <- intersect(names(localA),names(localB)) #c('Village_co', 'X','Y','Metric...System')
 local_all <- merge(localA, localB, by = shared_col_names, all = T)
 
-local_all_lite <- local_all[c('X','Y','Metric...System')]
-write.csv(local_all_lite, '~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/666_and_680_Proposed_Points_Merged.csv', row.names=F)
-write.csv(localA, '~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/666_Proposed_Points.csv', row.names=F)
-write.csv(localB, '~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/680_Proposed_Points.csv', row.names=F)
+#Subset States on interest to match Shaky's joined subset
+States <- c("Chin", "Magway")
+local_all <- subset(local_all, State %in% States) #Unreliable because ST attribute is not consistent
 
+#Coerce points to spatial dataframe
+coordinates(local_all) = ~X+Y
+#Inside 'Chin' State?
+MMR_polygon <- readShapePoly("~/Dropbox/Myanmar_GIS/Admin_Boundaries/3_adm1_states_regions2_250k_mimu/adm1_states_regions2_250k_mimu.shp")
+InMMR <- over(local_all,MMR_polygon)[2]  
 
+local_all <- cbind(local_all, InMMR)
+local_Chin_Magway <- subset(local_all, ST %in% c("Magway Region","Chin State")) #Subset by spatial query instead
+
+#Output Results
+local_all_lite <- local_all[c('X','Y','Metric...System', 'State', 'Name')]
+write.csv(local_all_lite, '~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/666_and_680_Proposed_Points_Merged-20140412.csv', row.names=F)
+write.csv(localA, '~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/666_Proposed_Points-20140412.csv', row.names=F)
+write.csv(localB, '~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/680_Proposed_Points-20140412.csv', row.names=F)
 
 #Pulling in Shaky's join
 proposed_AB <- readShapeLines("~/Dropbox/Myanmar_GIS/Modeling/Tests/666_and_680_Proposed_Grid_Merged.shp")
+
+
+
+
+
 
 
 
