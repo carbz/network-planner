@@ -247,3 +247,108 @@ write.csv(allsettlements.desas,"~/Dropbox/Indonesia Geospatial Analysis/Data Mod
 WriteXLS("all_settlements","~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Settlements-CategorizedForStrategicGuidance-V20140409.xls")
 write.csv(all_settlements,"~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/All-Settlements-CategorizedForStrategicGuidance-V20140409.csv")
 
+###PART 2 
+### Characterize Project Area with cross-water jumps removed
+
+source('~/github/network-planner/MMR-analysis/interpret_commonfunctions.R')
+source('~/github/network-planner/Prioritized/NetworkPlanner_SystemRollout_Greedy.R')
+source('~/github/network-planner/Prioritized/Custom_Rollout_Functions.R')
+
+
+# Rollout 
+#If all that stuff works, let's suggest a sequence in which to roll out the construction of grid-nodes.  This has been pre-developed and we're reapplying here 
+#Importing proposed grid by itself, no existing lines as well
+
+proposed <- readShapeLines("~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/Modified Scenario/metrics-proposed.shp")
+proposed$FID <- row.names(proposed) # ensure FID is unqiue
+
+#Establish unique IDs for metrics local file
+local <- read.csv("~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/Modified Scenario/ALL-metrics-local.csv", skip=1) 
+local$Settlement.id <- rownames(local) #use generic row names for unique ID of each unique settlement point
+
+proj4 <- read.csv("~/Dropbox/Myanmar_GIS/Modeling/Tests/680/metrics-local.csv", nrows=1, header = FALSE)[1]
+
+#Use output of priortized.grid function as input to far-sighted optimized rollout algorithim 
+#takes a shapefile (network) and csv (nodal descriptions and weights) 
+#and suggests a sequential, phased roll-out of the system based on a greedy, one step ahead view
+#***RUNTIME ~05:30***********
+greedy_grid <- prioritized.grid.greedy(local,proposed, proj4)
+##***************************
+
+#Explicitly define greedy grid output as a dataframe
+#Sometimes I need to explicitly call the fataframe for greedy.grid - arghhhh
+if (length(greedy_grid)==2){
+  print("Houston, we have a problem with our dataframe")
+  greedy_grid  <- as.data.frame(greedy_grid[1])
+}
+
+#Function to determine downstream summations for greedy grid
+greedy_grid_cumulatives <- downstream.sum.calculator(greedy_grid)
+
+#Far Sighted function to improve near-sighted greedy grid
+#* **********************
+farsighted_grid <- far_sighted_rollout(greedy_grid_cumulatives)
+#******************************
+
+##Phasing, Rollout and Costs
+#Order the suggested grid path by optimal sequence
+farsighted_grid$seq_fs <- farsighted_grid$far.sighted.sequence#shapefile chops longer names
+farsighted_grid <- farsighted_grid[order(farsighted_grid$far.sighted.sequence),]
+
+#Develop cummulative sum of network length metric
+farsighted_grid <- mutate(farsighted_grid, 
+                          CumulativeNetworkExtent.m = cumsum(dist),
+                          CumulativeHousesConnected.qty = cumsum(Demand..household....Target.household.count))
+
+#Scalar Values of region before expansion efforts began
+percent_houses_connected_at_start <- 0
+houses_connected_at_start <- 0
+total_houses <- sum(local$Demand..household....Target.household.count, na.rm=T)
+new_grid_connections <- max(farsighted_grid$CumulativeHousesConnected.qty)
+
+#Establish some Castalia-specific Metrics 
+farsighted_grid <- mutate(farsighted_grid, 
+                          MVLinePerConnection = dist/Demand..household....Target.household.count,
+                          TransformerCostPerConnection = System..grid....Transformer.cost/Demand..household....Target.household.count,
+                          PercentOfNewGridConnections = CumulativeHousesConnected.qty/new_grid_connections)
+
+#That lets us develop Phase bins
+farsighted_grid$Phase_HH <- NA
+total_phases <- 5
+phase_increment_house <- sum(farsighted_grid$Demand..household....Target.household.count)
+
+for (j in 1:total_phases){
+  
+  lower_cutoff <- (j-1)/total_phases*phase_increment_house
+  upper_cutoff <- j/total_phases*phase_increment_house
+  
+  farsighted_grid$Phase_HH[which((farsighted_grid$CumulativeHousesConnected.qty >= lower_cutoff) &
+                                   (farsighted_grid$CumulativeHousesConnected.qty <= upper_cutoff))] <- j
+  
+}
+
+farsighted_grid$Phase_MV <- NA
+total_phases <- 5
+phase_increment_grid <- sum(farsighted_grid$dist)
+
+for (j in 1:total_phases){
+  
+  lower_cutoff <- (j-1)/total_phases*phase_increment_grid
+  upper_cutoff <- j/total_phases*phase_increment_grid
+  
+  farsighted_grid$Phase_MV[which((farsighted_grid$CumulativeNetworkExtent.m >= lower_cutoff) &
+                                   (farsighted_grid$CumulativeNetworkExtent.m <= upper_cutoff))] <- j
+}
+
+##Output The Good stuff
+path_name <-"~/Dropbox/Indonesia Geospatial Analysis/Data Modeling and Analysis/NPoutputs/April 2014/Modified Scenario/"
+setwd(path_name)
+
+metrics_local_with_sequence <- (farsighted_grid[which(!(duplicated(farsighted_grid$id))),])
+
+proposed_with_rollout <- merge(proposed, metrics_local_with_sequence, by.x = "FID", by.y = "id")
+writeLinesShape(proposed_with_rollout, "networks-proposed-with-rollout.shp")
+
+  
+  
+
