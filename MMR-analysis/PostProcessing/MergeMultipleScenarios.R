@@ -5,6 +5,7 @@
 source('~/github/network-planner/Prioritized/NetworkPlanner_SystemRollout_Greedy.R')
 source('~/github/network-planner/Prioritized/Custom_Rollout_Functions.R')
 source('~/github/network-planner/IDN-analysis/PostProcessing/interpret_commonfunctions.R')
+source('~/github/network-planner/Prioritized/NP_rollout_common_functions.R')
 
 #Jonathan's Directory 
 path_name <-"~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/"
@@ -16,34 +17,29 @@ setwd(path_name)
 
 #Import Phase 1 Data
 localA <- read.csv(paste0(directory_names[1],"/metrics-local.csv"), skip=1) #RUNTIME ~ 00:28 mins
-localA$Settlement.id <- rownames(localA) #use generic row names for unique ID of each unique settlement point
+#localA$Settlement.id <- rownames(localA) #use generic row names for unique ID of each unique settlement point
+localA$Settlement.id <- NULL
 proposedA <- readShapeLines(paste0(directory_names[1],"/networks-proposed.shp"))
 
 proj4 <- read.csv(paste0(directory_names[1],"/metrics-local.csv"), nrows=1, header = FALSE)
 
 
 localB <- read.csv(paste0(directory_names[2],"/metrics-local.csv"), skip=1) #RUNTIME ~ 00:28 mins
-localB$Settlement.id <- rownames(localB) #use generic row names for unique ID of each unique settlement point
+#localB$Settlement.id <- rownames(localB) #use generic row names for unique ID of each unique settlement point
+localB$Settlement.id <- NULL
 proposedB <- readShapeLines(paste0(directory_names[2],"/networks-proposed.shp"))
 
 #There are some problem variables inconsistent btw two datasets, let's pretend they exist in both
-localA$Villagetr1 <- NA
-localB$Vt_code <- NA
+localA$Villagetr1 <- NULL
+localB$Vt_code <- NULL
 
 #Merge
 shared_col_names <- intersect(names(localA),names(localB)) #c('Village_co', 'X','Y','Metric...System')
 local_all <- merge(localA, localB, by = shared_col_names, all = T)
 
 #Subset States on interest to match Shaky's joined subset
-States <- c("Chin", "Magway")
-local_all <- subset(local_all, State %in% States) #Unreliable because ST attribute is not consistent
-
-
-
-
-
-
-
+# States <- c("Chin", "Magway")
+# local_all <- subset(local_all, State %in% States) #Unreliable because ST attribute is not consistent
 
 #Coerce points to spatial dataframe
 coordinates(local_all) = ~X+Y
@@ -57,26 +53,26 @@ local_Chin_Magway <- subset(local_all, ST %in% c("Magway Region","Chin State")) 
 
 #Output Results
 local_all_lite <- local_all[c('X','Y','Metric...System', 'State', 'Name')]
-write.csv(local_all_lite, '~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/666_and_680_Proposed_Points_Merged-20140412.csv', row.names=F)
+write.csv(local_all_lite, '~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/666_and_680_Proposed_Points_Merged-20140425.csv', row.names=F)
 write.csv(local_Chin_Magway, '~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/MergedScenarios/metrics-local.csv', row.names=F)
 
 
-write.csv(localA, '~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/666_Proposed_Points-20140412.csv', row.names=F)
-write.csv(localB, '~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/680_Proposed_Points-20140412.csv', row.names=F)
+write.csv(localA, '~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/666_Proposed_Points-20140425.csv', row.names=F)
+write.csv(localB, '~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/680_Proposed_Points-20140425.csv', row.names=F)
 
 #Pulling in Shaky's join
-proposed_AB <- readShapeLines("~/Dropbox/Myanmar_GIS/Modeling/Tests/666_and_680_Proposed_Grid_Merged.shp")
+#proposed_AB <- readShapeLines("~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/MergedScenarios/networks-proposed-20140423.shp") #too complicated
+#proposed_AB <- readShapeLines("~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/666_and_680_Proposed_Grid_Merged.shp") #dangling vertex included
+proposed_AB <- readShapeLines("~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/MergedScenarios/networks-proposed-20140425.shp") #duplicate cross border segment removed
 
 ## Test Rollout Script 
-#require(networkplanner)
+
+require(networkplanner)
 #2. Read NetworkPlanner scenario assuming directory is on local machine
-base_dir <- "~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/MergedScenarios"
-# np <- read_networkplan(base_dir)
+#base_dir <- "~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/MergedScenarios"
+#np <- read_networkplan(base_dir)
 
-source('~/github/network-planner/IDN-analysis/PostProcessing/interpret_commonfunctions.R')
-source('~/github/network-planner/Prioritized/NetworkPlanner_SystemRollout_Greedy.R')
-source('~/github/network-planner/Prioritized/Custom_Rollout_Functions.R')
-
+#******** PART II ********** #
 # Rollout 
 #If all that stuff works, let's suggest a sequence in which to roll out the construction of grid-nodes.  This has been pre-developed and we're reapplying here 
 #Importing proposed grid by itself, no existing lines as well
@@ -95,7 +91,7 @@ proj4 <- read.csv("~/Dropbox/Myanmar_GIS/Modeling/Tests/680/metrics-local.csv", 
 #takes a shapefile (network) and csv (nodal descriptions and weights) 
 #and suggests a sequential, phased roll-out of the system based on a greedy, one step ahead view
 #***RUNTIME ~08:00***********
-greedy_grid <- prioritized.grid.greedy(local,proposed, proj4)
+greedy_grid <- prioritized.grid.greedy(local,proposed)
 ##***************************
 
 #Explicitly define greedy grid output as a dataframe
@@ -166,7 +162,7 @@ for (j in 1:total_phases){
 ##Output The Good stuff
 metrics_local_with_sequence <- (farsighted_grid[which(!(duplicated(farsighted_grid$id))),])
 proposed_with_rollout <- merge(proposed, metrics_local_with_sequence, by.x = "FID", by.y = "id")
-writeLinesShape(proposed_with_rollout, "carbajal_putzing/MergedScenarios/networks-proposed-with-rollout.shp")
+writeLinesShape(proposed_with_rollout, "carbajal_putzing/MergedScenarios/networks-proposed-with-rollout-20140425.shp")
 
 
 
