@@ -80,6 +80,23 @@ write.csv(local_all, paste0(path_name,'merged_tests/ayeyarwady/metrics-local.csv
 #Pulling in Shaky's join
 proposed_merged <- readShapeLines(paste0(path_name,
                                      "merged_tests/ayeyarwady/AY_Network_Proposed_Merged_from_3_Scenarios/AY_Network_Proposed_Merged_from_3_Scenarios.shp"))
+
+proposed1 <- readShapeLines(paste0(path_name,directory_names[1],'/networks-proposed.shp'))
+proposed2 <- readShapeLines(paste0(path_name,directory_names[2],'/networks-proposed.shp'))
+proposed3 <- readShapeLines(paste0(path_name,directory_names[3],'/networks-proposed.shp'))
+
+# change their IDs so they don't conflict
+proposed1 <- spChFIDs(proposed1, paste0('1.', proposed1$FID))
+proposed2 <- spChFIDs(proposed2, paste0('2.', proposed2$FID))
+proposed3 <- spChFIDs(proposed3, paste0('3.', proposed3$FID))
+
+# add a 'MVLineType' attribute
+lines <- rbind(proposed1, proposed2)
+lines <- rbind(lines, proposed3)
+
+writeLinesShape(lines, paste0(path_name,'merged_tests/ayeyarwady/networks-proposed.shp'))
+
+
 ## Test Rollout Script 
 
 require(networkplanner)
@@ -92,7 +109,8 @@ require(networkplanner)
 #If all that stuff works, let's suggest a sequence in which to roll out the construction of grid-nodes.  This has been pre-developed and we're reapplying here 
 #Importing proposed grid by itself, no existing lines as well
 
-proposed <- proposed_merged
+#proposed <- proposed_merged
+proposed <- lines
 proposed$FID <- row.names(proposed) # ensure FID is unqiue
 
 #Establish unique IDs for metrics local file
@@ -104,6 +122,7 @@ local$Settlement.id <- rownames(local) #use generic row names for unique ID of e
 #and suggests a sequential, phased roll-out of the system based on a greedy, one step ahead view
 #***RUNTIME ~08:00***********
 greedy_grid <- prioritized.grid.greedy(local,proposed)
+write.csv(greedy_grid, paste0(path_name,'merged_tests/ayeyarwady/metrics-local-nearsightedrank.csv'), row.names=F)
 ##***************************
 
 #Explicitly define greedy grid output as a dataframe
@@ -174,7 +193,9 @@ for (j in 1:total_phases){
 ##Output The Good stuff
 metrics_local_with_sequence <- (farsighted_grid[which(!(duplicated(farsighted_grid$id))),])
 proposed_with_rollout <- merge(proposed, metrics_local_with_sequence, by.x = "FID", by.y = "id")
-writeLinesShape(proposed_with_rollout, "carbajal_putzing/MergedScenarios/networks-proposed-with-rollout-20140425.shp")
+writeLinesShape(proposed_with_rollout, 
+                paste0(path_name,
+                       "merged_tests/ayeyarwady/networks-proposed-with-rollout-20140428.shp"))
 
 
 
