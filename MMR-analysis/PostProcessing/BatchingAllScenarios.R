@@ -1,0 +1,356 @@
+#sort NetworkPlanner's "grid" settlements nodes based on a global priority scheme 
+#while denoting each unique branch they're originating from 
+#using an implementation of Prim's algorithm on the priortized grid network resulting from Zaimings script.  
+
+source('~/github/network-planner/Prioritized/NetworkPlanner_SystemRollout_Greedy.R')
+source('~/github/network-planner/Prioritized/Custom_Rollout_Functions.R')
+source('~/github/network-planner/IDN-analysis/PostProcessing/interpret_commonfunctions.R')
+source('~/github/network-planner/Prioritized/NP_rollout_common_functions.R')
+
+#Jonathan's Directory 
+path_name <-"Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/"
+
+# directory_names <- c("Ayeyar_Without_Maubin&Hinthada_8kmBuf/151-Ayer+25km-TEST/",
+#                      "BagoWest_Hinthada(Ayeyar)/152-Bago_West_Hinthada_25KMBuf",
+#                      "Yongan_Maubin(Ayeyar)_24KM/700-Yangon＋Maubin(Ayeyar)24kmBuffer-GAD+MIMU")
+
+all_scenarios <-c('Rakhine/701-w25kmBuf-GAD+MIMU/',
+                  'Mandalay/702/',
+                  'Yongon/700-Yangon＋Maubin(Ayeyar)24kmBuffer-GAD+MIMU/',
+                  'Kachin/703/',
+                  'Kayah/704/',
+                  
+                  'Magway/150/',
+                  'Ayeyar_Without_Maubin&Hinthada_8kmBuf/151-Ayer+25km-TEST/',
+                  'BagoWest_Hinthada(Ayeyar)/152-Bago_West_Hinthada_25KMBuf/',
+                  'Naypitaw/154-Nyapitaw/',
+                  'Sagaing/165/',
+                  'Chin//156-Chin/',
+                  'All_Bago/164-Bago-All-1000kWh-AmznTest/',
+                  'Sagaing/165/',
+                  'All_Shan/706/')
+directory_names <- all_scenarios
+
+setwd(path_name)
+#shorten merged file
+short_names <- c('Name',"X","Y", "Metric...System",
+                 "Demographics...Projected.household.count",
+                 "Demand..household....Target.household.count",
+                 "Demand...Projected.nodal.demand.per.year",
+                 "System..grid....Transformer.cost",
+                 "Demographics...Population.count",
+                 "Demographics...Projected.population.count")
+
+i=1
+#Import Phase 1 Data
+for (i in 1:length(directory_names)){
+  print(i) 
+  proj4 <- read.csv(paste0(path_name,directory_names[i],"/metrics-local.csv"), nrows=1, header = FALSE)[1]
+  print(proj4)
+  
+  local <- read.csv(paste0(path_name,directory_names[i],"metrics-local.csv"), skip=1) #RUNTIME ~ 00:28 mins
+  print(dim(local))
+  existing <- readShapeLines(paste0(path_name,directory_names[i],"networks-proposed.shp"))
+  
+  # Determine the nearest point on a line for a set of points
+  #
+  # input:  
+  #  output_dir:  where result files will be placed
+  #  point_csv_file:  csv of points (with Longitude, Latitude columns) 
+  #  line_shape_file:  shapefile of lines
+  # 
+  # output (will all be placed in output_dir): 
+  #  points_on_line.csv:  for each point in point_csv_file, the closest point to
+  #                       a line in line_shape_file
+  #  points_distances.csv:  point_csv_file with additional "distance" field
+  #                         representing the distance to the nearest line in
+  #                         line_shape_file
+  #  shortest_lines.shp:  shapefile representing shortest lines from input point
+  #                       to closest point on a line in line_shape_file
+  # 
+  # Run via command line:
+  # Rscript --vanilla point_to_segment_dists.R output_dir point_csv_file line_shape_file
+  
+  library(tools)
+  library(rgdal)
+  library(geosphere) # must be v1.3-8 or greater
+  
+  output_dir_name <- paste0(path_name,directory_names[i])
+  input_point_csv_name <- local
+  input_line_shapefile_name <- 'networks-existing'
+  # 
+  # input_point_csv_name <- "tmp/demographicsLL.csv"
+  # input_line_shapefile_name <- "tmp/LeonaNetworks.shp"
+  
+  # make points a SpatialPointsDataFrame
+  lonlat <- CRS("+proj=longlat +datum=WGS84")
+  point_df <- local#read.csv(input_point_csv_name)
+  coordinates(point_df) <- ~X+Y
+  proj4string(point_df) <- lonlat
+  
+  # make network a SpatialLinesDataFrame
+  shape_dir <- paste0(output_dir_name)
+  shape_base <- file_path_sans_ext(basename(input_line_shapefile_name))
+  
+  # use readOGR b/c it captures the projection
+  net_df <- readOGR(dsn=shape_dir, layer=input_line_shapefile_name)
+  net_df <- spTransform(net_df, lonlat)
+  
+  # calculate the dists to lines
+  dists <- dist2Line(point_df, net_df)
+  dists_df <- as.data.frame(dists)
+  # add the distance to the original point dataset
+  point_df$distance <- dists_df$distance
+  
+  # create lines representing shortest distance to network
+  from_mat <- as.matrix(coordinates(point_df))
+  to_mat <- as.matrix(dists_df[,c("lon", "lat")])
+  sp_lines_list <- lapply(1:nrow(from_mat), function(i) {
+    Lines(Line(rbind(from_mat[i,], to_mat[i,])),i)
+  })
+  
+  sp_lines <- SpatialLines(sp_lines_list, lonlat)
+  lines_data <- data.frame(distance=dists_df$distance, 
+                           line_id=dists_df$ID)
+  sp_lines_df <- SpatialLinesDataFrame(sp_lines, lines_data)
+  
+  writeOGR(sp_lines_df, output_dir_name, "shortest_lines", "ESRI Shapefile")
+  write.csv(dists_df, file.path(output_dir_name, "points_on_line.csv"))
+  write.csv(point_df, file.path(output_dir_name, "points_distances.csv"))
+  
+  
+  
+  
+  
+  }
+  
+
+local <- local[,short_names]
+
+proj4 <- read.csv(paste0(path_name,directory_names[i],"/metrics-local.csv"), nrows=1, header = FALSE)
+
+#There are some problem variables inconsistent btw two datasets, let's pretend they exist in both
+local1$Villagetr1 <- NULL
+local2$Villagetr1 <- NULL
+local3$Villagetr1 <- NULL
+
+local1$Vt_code <- NULL
+local2$Vt_code <- NULL
+local3$Vt_code <- NULL
+
+#Merge 1 & 2
+shared_col_names <- intersect(names(local1),names(local2)) #c('Village_co', 'X','Y','Metric...System')
+local_all <- merge(local1, local2, by = shared_col_names, all = T)
+#Merge 1,2 & 3
+shared_col_names <- intersect(names(local_all),names(local3)) #c('Village_co', 'X','Y','Metric...System')
+local_all <- merge(local_all, local3, by = shared_col_names, all = T)
+
+
+#Subset States on interest to match Shaky's joined subset
+# States <- c("Chin", "Magway")
+# local_all <- subset(local_all, State %in% States) #Unreliable because ST attribute is not consistent
+
+#Coerce points to spatial dataframe
+coordinates(local_all) = ~X+Y
+#Inside 'Chin' State?
+MMR_polygon <- readShapePoly("~/Dropbox/Myanmar_GIS/Admin_Boundaries/3_adm1_states_regions2_250k_mimu/adm1_states_regions2_250k_mimu.shp")
+
+InMMR <- over(local_all,MMR_polygon)[2]  
+
+local_all <- cbind(local_all, InMMR)
+#local_Chin_Magway <- subset(local_all, ST %in% c("Magway Region","Chin State")) #Subset by spatial query instead
+
+local_all_lite <- local_all[,short_names]
+
+
+
+#Output Results
+write.csv(local_all_lite, paste0(path_name,'merged_tests/ayeyarwady/metrics-local-lite20140428.csv'), row.names=F)
+write.csv(local_all, paste0(path_name,'merged_tests/ayeyarwady/metrics-local.csv'), row.names=F)
+
+#Pulling in Shaky's join
+proposed_merged <- readShapeLines(paste0(path_name,
+                                     "merged_tests/ayeyarwady/AY_Network_Proposed_Merged_from_3_Scenarios/AY_Network_Proposed_Merged_from_3_Scenarios.shp"))
+
+proposed1 <- readShapeLines(paste0(path_name,directory_names[1],'/networks-proposed.shp'))
+proposed2 <- readShapeLines(paste0(path_name,directory_names[2],'/networks-proposed.shp'))
+proposed3 <- readShapeLines(paste0(path_name,directory_names[3],'/networks-proposed.shp'))
+
+# change their IDs so they don't conflict
+proposed1 <- spChFIDs(proposed1, paste0('1.', proposed1$FID))
+proposed2 <- spChFIDs(proposed2, paste0('2.', proposed2$FID))
+proposed3 <- spChFIDs(proposed3, paste0('3.', proposed3$FID))
+
+# add a 'MVLineType' attribute
+lines <- rbind(proposed1, proposed2)
+lines <- rbind(lines, proposed3)
+
+writeLinesShape(lines, paste0(path_name,'merged_tests/ayeyarwady/networks-proposed.shp'))
+
+
+## Test Rollout Script 
+
+require(networkplanner)
+#2. Read NetworkPlanner scenario assuming directory is on local machine
+#base_dir <- "~/Dropbox/Myanmar_GIS/Modeling/Tests/carbajal_putzing/MergedScenarios"
+#np <- read_networkplan(base_dir)
+
+#******** PART II ********** #
+# Rollout 
+#If all that stuff works, let's suggest a sequence in which to roll out the construction of grid-nodes.  This has been pre-developed and we're reapplying here 
+#Importing proposed grid by itself, no existing lines as well
+
+#proposed <- proposed_merged
+proposed <- lines
+proposed$FID <- row.names(proposed) # ensure FID is unqiue
+
+#Establish unique IDs for metrics local file
+local <- local_all
+local$Settlement.id <- rownames(local) #use generic row names for unique ID of each unique settlement point
+
+#Use output of priortized.grid function as input to far-sighted optimized rollout algorithim 
+#takes a shapefile (network) and csv (nodal descriptions and weights) 
+#and suggests a sequential, phased roll-out of the system based on a greedy, one step ahead view
+#***RUNTIME ~08:00***********
+greedy_grid <- prioritized.grid.greedy(local,proposed)
+write.csv(greedy_grid, paste0(path_name,'merged_tests/ayeyarwady/metrics-local-nearsightedrank.csv'), row.names=F)
+##***************************
+
+#Explicitly define greedy grid output as a dataframe
+#Sometimes I need to explicitly call the fataframe for greedy.grid - arghhhh
+if (length(greedy_grid)==2){
+  print("Houston, we have a problem with our dataframe")
+  greedy_grid  <- as.data.frame(greedy_grid[1])
+}
+
+#Function to determine downstream summations for greedy grid
+greedy_grid_cumulatives <- downstream.sum.calculator(greedy_grid)
+
+#Far Sighted function to improve near-sighted greedy grid
+#* **********************
+farsighted_grid <- far_sighted_rollout(greedy_grid_cumulatives)
+#******************************
+
+##Phasing, Rollout and Costs
+#Order the suggested grid path by optimal sequence
+farsighted_grid$seq_fs <- farsighted_grid$far.sighted.sequence#shapefile chops longer names
+farsighted_grid <- farsighted_grid[order(farsighted_grid$far.sighted.sequence),]
+
+#Develop cummulative sum of network length metric
+farsighted_grid <- mutate(farsighted_grid, 
+                          CumulativeNetworkExtent.m = cumsum(dist),
+                          CumulativeHousesConnected.qty = cumsum(Demand..household....Target.household.count))
+
+#Scalar Values of region before expansion efforts began
+percent_houses_connected_at_start <- 0
+houses_connected_at_start <- 0
+total_houses <- sum(local$Demand..household....Target.household.count, na.rm=T)
+new_grid_connections <- max(farsighted_grid$CumulativeHousesConnected.qty)
+
+#Establish some Castalia-specific Metrics 
+farsighted_grid <- mutate(farsighted_grid, 
+                          MVLinePerConnection = dist/Demand..household....Target.household.count,
+                          TransformerCostPerConnection = System..grid....Transformer.cost/Demand..household....Target.household.count,
+                          PercentOfNewGridConnections = CumulativeHousesConnected.qty/new_grid_connections)
+
+#That lets us develop Phase bins
+farsighted_grid$Phase_HH <- NA
+total_phases <- 5
+phase_increment_house <- sum(farsighted_grid$Demand..household....Target.household.count)
+
+for (j in 1:total_phases){
+  
+  lower_cutoff <- (j-1)/total_phases*phase_increment_house
+  upper_cutoff <- j/total_phases*phase_increment_house
+  
+  farsighted_grid$Phase_HH[which((farsighted_grid$CumulativeHousesConnected.qty >= lower_cutoff) &
+                                   (farsighted_grid$CumulativeHousesConnected.qty <= upper_cutoff))] <- j
+  
+}
+
+farsighted_grid$Phase_MV <- NA
+total_phases <- 5
+phase_increment_grid <- sum(farsighted_grid$dist)
+
+for (j in 1:total_phases){
+  
+  lower_cutoff <- (j-1)/total_phases*phase_increment_grid
+  upper_cutoff <- j/total_phases*phase_increment_grid
+  
+  farsighted_grid$Phase_MV[which((farsighted_grid$CumulativeNetworkExtent.m >= lower_cutoff) &
+                                   (farsighted_grid$CumulativeNetworkExtent.m <= upper_cutoff))] <- j
+}
+
+##Output The Good stuff
+metrics_local_with_sequence <- (farsighted_grid[which(!(duplicated(farsighted_grid$id))),])
+proposed_with_rollout <- merge(proposed, metrics_local_with_sequence, by.x = "FID", by.y = "id")
+writeLinesShape(proposed_with_rollout, 
+                paste0(path_name,
+                       "merged_tests/ayeyarwady/networks-proposed-with-rollout-20140428.shp"))
+
+
+
+
+#Polygon data too, why not!
+MMR_polygon <- readShapePoly("~/Dropbox/Myanmar_GIS/Admin_Boundaries/3_adm1_states_regions2_250k_mimu/adm1_states_regions2_250k_mimu.shp")
+#     #now let's make it more ggplottable and keep any attribute data 
+MMR_polygon@data$id <- rownames(MMR_polygon@data)
+MMR_polygon <- merge(MMR_polygon@data, fortify(MMR_polygon), by = 'id')
+MMR_polygon<- malukuutara_polygon
+MMR_polygon$State <- MMR_polygon$ST
+
+
+google_earth_plot <- function(path, points) {
+  
+  ##This returns the left/bottom/right/top bounding box points 
+  #of a given X, Y point set
+  #names(location) <- c("left","bottom","right","top")
+  loc <- c(min(points$X)-1, #left 
+           min(points$Y)-1, #bottom
+           max(points$X)+1, #right
+           max(points$Y)+1) #top
+  map <- get_map(location= loc)
+  
+  p<- ggmap(map, legend = "topleft") + 
+    geom_path(data=path, aes(x=long, y=lat, group=group), color='black') + 
+    scale_size_manual(values=c(.5,1.5)) + 
+    scale_linetype_manual(values=c("solid", "dotdash")) + 
+    geom_point(data=points, aes(x = X, y = Y, colour = Metric...System)) +
+    #scale_shape_manual(values=c(20, 11), labels=c("BIG", "BPS")) +
+    scale_color_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Unelectrified")) + 
+    labs(title = "NetworkPlanner Outputs", x = "Longitude", y="Latitude", color = "Electrification Tech.", shape = "Settlement Data Source") +
+    coord_equal(xlim=c(min(points$X),max(points$X)),ylim=c(min(points$Y),max(points$Y)))
+  
+  return(p)
+}
+#Develop map with Google Background for better reference
+proposed_GE_background <- google_earth_plot(proposed_AB, local_all)
+proposed_GE_background
+
+##My favorite plot
+tiff(filename="carbajal_putzing/Output-Overview-Map-GEbackground.tiff")
+plot(proposed_GE_background)
+dev.off()
+
+ggsave(plot=proposed_GE_background, filename="carbajal_putzing/proposed_GE_background.png")
+
+comprehensive_plot <- function(polygon, path, points) {
+  
+  ggplot() + 
+    geom_polygon(data = polygon, aes(x=long,y=lat, group=group, fill=ST), alpha=0.3) +
+    geom_path(data=path, aes(x=long, y=lat, group=group), color='black') + 
+    scale_size_manual(values=c(.5,1.5)) + 
+    scale_linetype_manual(values=c("solid", "dotdash")) + 
+    geom_point(data=points, aes(x = X, y = Y, colour = Metric...System)) +
+    scale_color_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Unelectrified")) + 
+    labs(title = "NetworkPlanner Outputs", x = "Longitude", y="Latitude", color = "Electrification Tech.", shape = "Settlement Data Source") +
+    coord_equal(xlim=c(min(points$X),max(points$X)),ylim=c(min(points$Y),max(points$Y)))
+}
+
+#Explicitly define the plot regions of interest based on NP outputs and BPS Polygon data
+big_picture_plot <- comprehensive_plot(MMR_polygon, proposed_AB, local_all) + blank_theme() 
+
+big_picture_plot
+ggsave(plot=big_picture_plot, filename="carbajal_putzing/OutputOverView-Map.png")
+
+#Summarize outputs by technology type (ie Off-Grid, Mini-Grid and Grid systems)
