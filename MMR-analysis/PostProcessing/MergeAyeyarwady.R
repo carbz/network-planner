@@ -10,9 +10,9 @@ source('~/github/network-planner/Prioritized/NP_rollout_common_functions.R')
 #Jonathan's Directory 
 path_name <-"~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/"
 
-directory_names <- c("Ayeyar_Without_Maubin&Hinthada_8kmBuf/151-Ayer+25km-TEST/",
+directory_names <- c("Ayeyar_Without_Maubin&Hinthada_8kmBuf/151-Ayer+25km-TEST",
                      "BagoWest_Hinthada(Ayeyar)/152-Bago_West_Hinthada_25KMBuf",
-                     "Yongan_Maubin(Ayeyar)_24KM/700-Yangon＋Maubin(Ayeyar)24kmBuffer-GAD+MIMU")
+                     "Yongon/700-Yangon＋Maubin(Ayeyar)24kmBuffer-GAD+MIMU")
 
 setwd(path_name)
 #shorten merged file
@@ -22,7 +22,8 @@ short_names <- c('Name',"X","Y", "Metric...System",
                  "Demand...Projected.nodal.demand.per.year",
                  "System..grid....Transformer.cost",
                  "Demographics...Population.count",
-                 "Demographics...Projected.population.count")
+                 "Demographics...Projected.population.count",
+                 'State')
 
 #Import Phase 1 Data
 local1 <- read.csv(paste0(path_name,directory_names[1],"/metrics-local-orig.csv"), skip=1) #RUNTIME ~ 00:28 mins
@@ -54,6 +55,8 @@ local_all <- merge(local1, local2, by = shared_col_names, all = T)
 shared_col_names <- intersect(names(local_all),names(local3)) #c('Village_co', 'X','Y','Metric...System')
 local_all <- merge(local_all, local3, by = shared_col_names, all = T)
 
+##OUTPUT the inputs
+write.csv(local_all, '~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/ayeyarwady/metrics-local-full20140502.csv', row.names=F)
 
 #Subset States on interest to match Shaky's joined subset
 # States <- c("Chin", "Magway")
@@ -197,7 +200,34 @@ writeLinesShape(proposed_with_rollout,
                 paste0(path_name,
                        "merged_tests/ayeyarwady/networks-proposed-with-rollout-20140428.shp"))
 
+#output the flat csv files
+shared_col_names <- intersect(names(standalones),names(farsighted_grid)) 
 
+standalones <- subset(local_all, Metric...System != 'grid')
+standalones<-local_all
+names(standalones)[names(standalones) == 'X'] <- 'long'
+names(standalones)[names(standalones) == 'Y'] <- 'lat'
+
+local_all_nodes <- merge(farsighted_grid, standalones, by = shared_col_names, all=T)
+local_all_nodes <- rbind.fill(farsighted_grid, standalones)
+write.csv(local_all_nodes, paste0(path_name,
+                            'merged_tests/ayeyarwady/metrics-local-all-nodes-rollout_sequence-20140502.csv'))
+
+#Inside 'Ayeyawady' State?
+coordinates(local_all_nodes) = ~long+lat
+
+MMR_polygon <- readShapePoly("~/Dropbox/Myanmar_GIS/Admin_Boundaries/3_adm1_states_regions2_250k_mimu/adm1_states_regions2_250k_mimu.shp")
+
+InMMR <- over(local_all_nodes,MMR_polygon)[2]  
+
+local_all_nodes <- cbind(local_all_nodes, InMMR)
+# local_Ayeyarwady <- subset(local_all_nodes, ST %in% c("Ayeyarwady Region")) #Subset by spatial query instead
+# write.csv(local_Ayeyarwady, paste0(path_name,
+#                                   'merged_tests/ayeyarwady/metrics-local-all-nodes-rollout_sequence-clipped-20140502.csv'))
+
+
+write.csv(subset(local_all_nodes, State=='Ayeyarwady'), 
+          paste0(path_name,'merged_tests/ayeyarwady/metrics-local-all-nodes-rollout_sequence-clipped-20140502.csv'))
 
 
 #Polygon data too, why not!
@@ -207,59 +237,3 @@ MMR_polygon@data$id <- rownames(MMR_polygon@data)
 MMR_polygon <- merge(MMR_polygon@data, fortify(MMR_polygon), by = 'id')
 MMR_polygon<- malukuutara_polygon
 MMR_polygon$State <- MMR_polygon$ST
-
-
-google_earth_plot <- function(path, points) {
-  
-  ##This returns the left/bottom/right/top bounding box points 
-  #of a given X, Y point set
-  #names(location) <- c("left","bottom","right","top")
-  loc <- c(min(points$X)-1, #left 
-           min(points$Y)-1, #bottom
-           max(points$X)+1, #right
-           max(points$Y)+1) #top
-  map <- get_map(location= loc)
-  
-  p<- ggmap(map, legend = "topleft") + 
-    geom_path(data=path, aes(x=long, y=lat, group=group), color='black') + 
-    scale_size_manual(values=c(.5,1.5)) + 
-    scale_linetype_manual(values=c("solid", "dotdash")) + 
-    geom_point(data=points, aes(x = X, y = Y, colour = Metric...System)) +
-    #scale_shape_manual(values=c(20, 11), labels=c("BIG", "BPS")) +
-    scale_color_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Unelectrified")) + 
-    labs(title = "NetworkPlanner Outputs", x = "Longitude", y="Latitude", color = "Electrification Tech.", shape = "Settlement Data Source") +
-    coord_equal(xlim=c(min(points$X),max(points$X)),ylim=c(min(points$Y),max(points$Y)))
-  
-  return(p)
-}
-#Develop map with Google Background for better reference
-proposed_GE_background <- google_earth_plot(proposed_AB, local_all)
-proposed_GE_background
-
-##My favorite plot
-tiff(filename="carbajal_putzing/Output-Overview-Map-GEbackground.tiff")
-plot(proposed_GE_background)
-dev.off()
-
-ggsave(plot=proposed_GE_background, filename="carbajal_putzing/proposed_GE_background.png")
-
-comprehensive_plot <- function(polygon, path, points) {
-  
-  ggplot() + 
-    geom_polygon(data = polygon, aes(x=long,y=lat, group=group, fill=ST), alpha=0.3) +
-    geom_path(data=path, aes(x=long, y=lat, group=group), color='black') + 
-    scale_size_manual(values=c(.5,1.5)) + 
-    scale_linetype_manual(values=c("solid", "dotdash")) + 
-    geom_point(data=points, aes(x = X, y = Y, colour = Metric...System)) +
-    scale_color_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Unelectrified")) + 
-    labs(title = "NetworkPlanner Outputs", x = "Longitude", y="Latitude", color = "Electrification Tech.", shape = "Settlement Data Source") +
-    coord_equal(xlim=c(min(points$X),max(points$X)),ylim=c(min(points$Y),max(points$Y)))
-}
-
-#Explicitly define the plot regions of interest based on NP outputs and BPS Polygon data
-big_picture_plot <- comprehensive_plot(MMR_polygon, proposed_AB, local_all) + blank_theme() 
-
-big_picture_plot
-ggsave(plot=big_picture_plot, filename="carbajal_putzing/OutputOverView-Map.png")
-
-#Summarize outputs by technology type (ie Off-Grid, Mini-Grid and Grid systems)
