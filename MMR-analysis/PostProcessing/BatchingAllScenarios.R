@@ -199,12 +199,13 @@ castalia_scenarios <- c('150-Magway-metrics-local-all-nodes-rollout_sequence-cli
                      '157C-Tanintharyi-metrics-local-all-nodes-rollout_sequence-clipped-ForCastalia.csv',
                      '164-Bago-metrics-local-all-nodes-rollout_sequence-clipped-ForCastalia.csv',
                      '165-Sagaing-metrics-local-all-nodes-rollout_sequence-clipped-ForCastalia.csv',
-                     'HoldOnAnalysis-Rechecking/167-Ayerarwady-metrics-local-all-nodes-rollout_sequence-clipped-ForCastalia.csv',
+                     '167-Ayerarwady-metrics-local-all-nodes-rollout_sequence-clipped-ForCastalia.csv',
+                     '700-Yangon-metrics-local-all-nodes-rollout_sequence-clipped-ForCastalia.csv',
                      '701-Rakhine-metrics-local-all-nodes-rollout_sequence-clipped-ForCastalia.csv',
                      '702-Mandalay-metrics-local-all-nodes-rollout_sequence-clipped-ForCastalia.csv',
                      '703-Kachin-metrics-local-all-nodes-rollout_sequence-clipped-ForCastalia.csv',
                      '704-Kayah-metrics-local-all-nodes-rollout_sequence-clipped-ForCastalia.csv',
-                     '706-All-Shan-metrics-local-all-nodes-rollout_sequence-clipped-ForCastalia.csv')
+                     '706-Shan-All-metrics-local-all-nodes-rollout_sequence-clipped-ForCastalia.csv')
                      
 directory_names <- castalia_scenarios
 
@@ -213,7 +214,7 @@ setwd(path_name)
 short_names <- c('Name',"X","Y", "Metric...System","State","Demographics...Projected.household.count",
                  "Demand..household....Target.household.count","Demand...Projected.nodal.demand.per.year",
                  "System..grid....Transformer.cost","Demographics...Population.count",
-                 "Demographics...Projected.population.count","Scenario")
+                 "Demographics...Projected.population.count","Scenario","Scenario_name")
 
 admin_codes <- c('District','District_c','Gr_ml_cm','Ho_size_r','Ho_size_u',
                  'Mg_fl_cl','Pop_2001','Pop_2011','Pop_2013','Pop_g_r','Pop_g_u',
@@ -226,7 +227,9 @@ EA_codes <- c('order','piece','group','id','root','branch','dist','depth',
               'far.sighted.sequence','CumulHH','PhaseByHHQuintile','PhaseByHHQuintRnd',
               'CumulDist','PhaseByMVQuintile','PhaseByMVQuintRnd','BinsBySett.Size') 
 
-i=1
+GIS_names <- c()
+
+i=10
 local_all_MMR <- as.data.frame(NULL)
 #Import Phase 1 Data
 for (i in 1:length(castalia_scenarios)){
@@ -235,11 +238,12 @@ for (i in 1:length(castalia_scenarios)){
   local <- read.csv(paste0(castalia_path,directory_names[i])) #RUNTIME ~ 00:28 mins
   scenario <- substr(directory_names[i],0,3)
   local$Scenario <- scenario
-  local_lite <- local[,short_names]
+  local$Scenario_name <- str_extract(directory_names[i], '[^-]*-[^-]*')
+  local_lite <- local[,c(short_names,admin_codes,EA_codes)]
   
   local_all_MMR<- rbind.fill(local_lite,local_all_MMR)
 }
-write.csv(local_all_MMR, '~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/local-AllStates-1000kWhDemand.csv', row.names=F)
+write.csv(local_all_MMR, '~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/master_merged/local_lite-AllStates-1000kWhDemand-V20140507.csv', row.names=F)
 
 ##Develop a composite view of Proposed lines
 
@@ -360,8 +364,147 @@ MMR_grid_cumulatives <- downstream.sum.calculator(all_MMR_nearsighted)
 write.csv(MMR_grid_cumulatives, paste0(path_name,'merged_tests/ayeyarwady/metrics-local-nearsightedrank+cumulatives.csv'), 
           row.names=F)
 
+##Output The intermediates
+metrics_local_with_sequence <- (MMR_grid_cumulatives[which(!(duplicated(MMR_grid_cumulatives$id))),])
+proposed_with_rollout <- merge(all_lines, metrics_local_with_sequence, by.x = "FID", by.y = "id")
+writeLinesShape(proposed_with_rollout, 
+                paste0(paste0(path_name,
+                              'merged_tests/master_merged/networks-proposed-with-Near-rollout-20140506.shp'), 
+                       row.names=F))
+
+
 #Far Sighted function to improve near-sighted greedy grid
 #* **********************
 farsighted_grid <- far_sighted_rollout(MMR_grid_cumulatives)
-#******************************
+  #******************************
+write.csv(farsighted_grid, paste0(path_name,'merged_tests/metrics-local-farsighted-20140507.csv'), 
+          row.names=F)
+
+uglify_tr <- function() {
+  theme(text=element_text(size=40),
+        legend.text = element_text(size=30),
+        axis.text = element_text(size=20),
+        axis.ticks=element_blank(), 
+        panel.grid=element_blank(),
+        panel.background=element_blank(),
+        legend.position=c(1,1), #x=0=left, y=1=top
+        legend.justification=c(1,1)) #x=1=left, y=1=bottom
+}
+
+uglify_tl <- function() {
+  theme(text=element_text(size=40),
+        legend.text = element_text(size=30),
+        axis.text = element_text(size=20),
+        axis.ticks=element_blank(), 
+        panel.grid=element_blank(),
+        panel.background=element_blank(),
+        legend.position=c(0.1,1), #x=0=left, y=1=top
+        legend.justification=c(0,1)) 
+}
+
+
+plot_state_hhmv_HHphase <- 
+  ggplot(data= local_all_MMR, 
+         aes(x=PhaseByHHQuintile, 
+             y=CumulDist/CumulHH, 
+             colour = Scenario_name)) +
+  geom_line(size =3) +
+  labs(title = "Cumulative Average of MV Line", 
+       x = "Phases by Equal HH Quintile", 
+       y="MV Line per Household [m/HH]", 
+       colour = "Scenarios") +
+  uglify_tl() 
+ggsave(plot=plot_state_hhmv_HHphase, filename="CastaliaScenarios-CumulativeMVAvg_Per_HHPhase.pdf", scale=2)
+
+plot_state_hhmv_MVphase <- 
+  ggplot(data= local_all_MMR, 
+         aes(x=PhaseByMVQuintile, 
+             y=CumulDist/CumulHH, 
+             colour = Scenario_name)) +
+  geom_line(size =3) +
+  labs(title = "Cumulative Average of MV Line", 
+       x = "Phases by Equal MV Quintile", 
+       y="MV Line per Household [m/HH]", 
+       colour = "Scenarios") +
+  uglify_tl() 
+ggsave(plot=plot_state_hhmv_MVphase, filename="CastaliaScenarios-CumulativeMVAvg_Per_MVPhase.pdf", scale=2)
+
+
+plot_state_hhmv_cumHH <- 
+  ggplot(data= local_all_MMR, 
+         aes(x=CumulHH/1000, 
+             y=CumulDist/CumulHH, 
+             colour = Scenario_name)) +
+  geom_line(size =3) +
+  labs(title = "Cumulative Average of MV Line", 
+       x = "1k Households Connected", 
+       y="MV Line per Household [m/HH]", 
+       colour = "Scenarios") +
+  uglify_tr() 
+ggsave(plot=plot_state_hhmv_cumHH, filename="CastaliaScenarios-CumulativeMVAvg_Per_CumHHs.pdf", scale=2)
+
+
+plot_state_mv_hh <- 
+  ggplot(data= local_all_MMR, 
+         aes(x=CumulHH/1000, 
+             y=CumulDist/1000, 
+             colour = Scenario_name)) +
+  labs(title = "Cumulative Average of MV Line", 
+       x = "1k Households Connected", 
+       y="MV Line Installed [km]", 
+       colour = "Scenarios") +
+  geom_line(size =3) +
+  uglify_tl() 
+  #geom_abline(intercept = 0, slope = 8/1, colour="#636363", linetype="dashed")
+  #geom_text(aes(y=7500,x=900,label = 'Average ~ 8 m/HH', angle = 8, vjust = -1))
+ggsave(plot=plot_state_mv_hh, filename="CastaliaScenarios-CumulativeMVTotal_Per_HHConnected.pdf", scale=2)
+ggsave(plot=plot_state_mv_hh, filename="CastaliaScenarios-CumulativeMVTotal_Per_HHConnected.png", scale=5)
+
+
+plot_state_mvHH_phase <- 
+    ggplot(data= local_all_MMR, 
+           aes(y=CumulDist/CumulHH, 
+               x=PhaseByHHQuintile, 
+               colour = Scenario_name)) +
+    labs(title = "Cumulative Average of MV Line", 
+         x = "Phase by Household Quintile", 
+         y="MV installed per Household [m]", 
+         colour = "Scenario_name") +
+    geom_line(size =3) +
+    uglify_tl() +
+  scale_fill_brewer(palette="Greys")
+plot_state_mvHH_phase
+ggsave(plot=plot_state_mvHH_phase, filename="CastaliaScenarios-CumulativeMVAvg_Per_HHPhase.pdf", scale=2)
+
+
+  
+plot_state_costs
+
+setwd('~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/master_merged/')
+ggsave(plot=plot_state_costs, filename="StatewiseCosts.pdf")
+
+
+plot_nat_costs <- 
+  ggplot(data= farsighted_grid, 
+         aes(x=seq_fs, 
+             y=CumulativeNetworkExtent.m/CumulativeHousesConnected.qty)) +
+  geom_line(size =3) +
+  labs(title = "Cumulative Average of MV Line", 
+       x = "Farsighted Sequence of Rollout", 
+       y="MV Line per Household [m/HH]", 
+       colour = "Scenarios") +
+  theme(text=element_text(size=40),
+        legend.text = element_text(size=30),
+        axis.text = element_text(size=20),
+        axis.ticks=element_blank(), 
+        panel.grid=element_blank(),
+        panel.background=element_blank(),
+        legend.position=c(0,1), #x=0=left, y=1=top
+        legend.justification=c(0,1))
+plot_nat_costs
+
+
+
+grid_summary_table <- ddply(local_all_MMR, .(Scenario, PhaseByMVQuintRnd), 
+                            )
  
