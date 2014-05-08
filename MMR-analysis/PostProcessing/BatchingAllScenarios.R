@@ -8,7 +8,7 @@ source('~/github/network-planner/IDN-analysis/PostProcessing/interpret_commonfun
 source('~/github/network-planner/Prioritized/NP_rollout_common_functions.R')
 
 #Jonathan's Directory 
-path_name <-"Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/All_Ayewardy/"
+path_name <-"~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/master_merged/"
 
 # directory_names <- c("Ayeyar_Without_Maubin&Hinthada_8kmBuf/151-Ayer+25km-TEST/",
 #                      "BagoWest_Hinthada(Ayeyar)/152-Bago_West_Hinthada_25KMBuf",
@@ -301,44 +301,60 @@ short_names <- c('Name',"X","Y", "Metric...System",
                  "Demographics...Projected.population.count")
 
 local_all_orig <- as.data.frame(NULL)
-local_all_orig <- read.csv('Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/master_merged/local_orig-AllStates-1000kWhDemand.csv')
+local_all_orig <- read.csv('~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/master_merged/local_orig-AllStates-1000kWhDemand.csv')
 all_lines <- readShapeLines('Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/master_merged/networks-proposed-orig_allMMR1000kWh.shp')
 
 i=1
-for (i in 1:length(directory_names)){
+local <- read.csv(paste0(path_name,directory_names[i],'/metrics-local.csv'), skip=1) #RUNTIME ~ 00:28 mins
+scenario <- substr(directory_names[i],0,3)
+local$Scenario <- scenario
+#local_lite <- local[,c(short_names,'Scenario')]
+local_lite<-local
+local_all_orig <- local_lite
+i=2
+for (i in 2:length(directory_names)){
   print(i) 
   
   local <- read.csv(paste0(path_name,directory_names[i],'/metrics-local.csv'), skip=1) #RUNTIME ~ 00:28 mins
   scenario <- substr(directory_names[i],0,3)
-  #local$Scenario <- scenario
-  local_lite <- local[,short_names]
-  
+  ##local$Scenario <- scenario
+  #local_lite <- local[,c(short_names)]
+  local_lite <- local
+    
   #Merge 1,2 & 3
   shared_col_names <- intersect(names(local_lite),names(local_all_orig)) #c('Village_co', 'X','Y','Metric...System')
-  local_all_orig <- merge(local_all_orig, local_lite, all=T)
+  local_all_orig <- merge(local_all_orig, local_lite, by=shared_col_names, all=T)
+  ##New guys get latest scenario designation
+  local_all_orig[which(is.na(local_all_orig$Scenario)),'Scenario'] <- scenario
   
-  #Merge all proposed shapefiles together
-  proposed_i <- readShapeLines(paste0(path_name,directory_names[i],'/networks-proposed.shp'))
-  
-  # change their IDs so they don't conflict
-  proposed_i <- spChFIDs(proposed_i, as.character(paste0(scenario,'.', proposed_i$FID)))
-  
-  # bind to previous dataset 'MVLineType' attribute
-  if (i>1){
-  all_lines <- rbind(proposed_i, all_lines) 
-  }else {
-    all_lines <- proposed_i
-  }
-
+#   #Merge all proposed shapefiles together
+#   proposed_i <- readShapeLines(paste0(path_name,directory_names[i],'/networks-proposed.shp'))
+#   
+#   # change their IDs so they don't conflict
+#   proposed_i <- spChFIDs(proposed_i, as.character(paste0(scenario,'.', proposed_i$FID)))
+#   
+#   # bind to previous dataset 'MVLineType' attribute
+#   if (i>1){
+#   all_lines <- rbind(proposed_i, all_lines) 
+#   }else {
+#     all_lines <- proposed_i
+#   }
 } 
+local_all_orig$XYID <- paste0(str_sub(as.character(local_all_orig$X*100000),end=7L),str_sub(as.character(local_all_orig$Y*100000),end=7L))
+
+##Looking at duplicates
+local_all_orig <- local_all_orig[order(local_all_orig$Metric...System),]#get grids to the top
+duplicates <- local_all_orig[which(duplicated(local_all_orig$XYID, 
+                                              fromLast=FALSE)),]#minimize grid nodes being removed
+uniques <- local_all_orig[which(!(duplicated(local_all_orig$XYID, 
+                                              fromLast=FALSE))),]#minimize grid nodes being removed
+
 write.csv(local_all_orig, 
           '~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/local_orig-AllStates-1000kWhDemand.csv', row.names=F)
 writeLinesShape(all_lines, 
                 '~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/networks-proposed-orig_allMMR1000kWh.shp')
 
   
-
-
 
 #Use output of priortized.grid function as input to far-sighted optimized rollout algorithim 
 #takes a shapefile (network) and csv (nodal descriptions and weights) 
@@ -380,6 +396,17 @@ farsighted_grid <- far_sighted_rollout(MMR_grid_cumulatives)
 write.csv(farsighted_grid, paste0(path_name,'merged_tests/metrics-local-farsighted-20140507.csv'), 
           row.names=F)
 
+##Edwin wants all settlements 
+farsighted_grid$XYID <- paste0(str_sub(as.character(farsighted_grid$long*100000),end=7L),str_sub(as.character(farsighted_grid$lat*100000),end=7L))
+farsighted_grid_all_settlements <- merge(local_all_orig, farsighted_grid, by='XYID', all=T)
+farsighted_grid_all_settlements <- farsighted_grid_all_settlements[order(farsighted_grid_all_settlements$far.sighted.sequence),]
+write.csv(farsighted_grid_all_settlements, paste0(path_name,'metrics-local-farsighted-20140508.csv'), 
+          row.names=F)
+
+
+#####PLOTS of the data new & old ######
+#*************************************#
+
 uglify_tr <- function() {
   theme(text=element_text(size=40),
         legend.text = element_text(size=30),
@@ -416,6 +443,25 @@ plot_state_hhmv_HHphase <-
   uglify_tl() 
 ggsave(plot=plot_state_hhmv_HHphase, filename="CastaliaScenarios-CumulativeMVAvg_Per_HHPhase.pdf", scale=2)
 
+
+##****COLORS****##
+#http://www.r-bloggers.com/crayon-colors-in-r/?utm_source=feedburner&utm_medium=email&utm_campaign=Feed%3A+RBloggers+%28R+bloggers%29
+library(devtools)
+install_github("kbroman/broman")
+library(broman)
+plot_crayons() 
+custom_colors <- brocolors("crayons")[15:29]
+row.names(custom_colors)
+
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", 
+               "#F0E442", "#0072B2", "#D55E00", "#CC79A7", 
+               "#000000", "#E69F00", "#56B4E9", "#009E73", 
+               "#F0E442", "#bc5d58", "#0d98ba")
+
+custom_colors2<- c("#0d98ba","#7366bd","#de5d83","#cb4154","#b4674d","#ff7f49",
+"#ea7e5d","#b0b7c6"le,"#ffff99","#00CC99","#ffaacc","#dd4492",
+"#1dacd6","#bc5d58","#dd9475") 
+
 plot_state_hhmv_MVphase <- 
   ggplot(data= local_all_MMR, 
          aes(x=PhaseByMVQuintile, 
@@ -426,7 +472,12 @@ plot_state_hhmv_MVphase <-
        x = "Phases by Equal MV Quintile", 
        y="MV Line per Household [m/HH]", 
        colour = "Scenarios") +
-  uglify_tl() 
+  uglify_tl() +
+  #scale_colour_manual(values=cbPalette) +
+  scale_colour_manual(values=custom_colors2) +
+  xlim(0.3,5) +
+  scale_linetype_manual(values=c("dotdash", "dotted"))
+
 ggsave(plot=plot_state_hhmv_MVphase, filename="CastaliaScenarios-CumulativeMVAvg_Per_MVPhase.pdf", scale=2)
 
 
