@@ -404,6 +404,15 @@ write.csv(farsighted_grid_all_settlements, paste0(path_name,'metrics-local-farsi
           row.names=F)
 
 
+##Output The Good stuff
+metrics_local_with_sequence <- (farsighted_grid[which(!(duplicated(farsighted_grid$id))),])
+all_lines$FID2 <- row.names(all_lines)
+proposed_with_rollout <- merge(all_lines, metrics_local_with_sequence, by.x = "FID2", by.y = "id", all=TRUE)
+writeLinesShape(proposed_with_rollout, "networks-proposed-with-rollout-20140508.shp")
+
+
+
+
 #####PLOTS of the data new & old ######
 #*************************************#
 
@@ -459,24 +468,33 @@ cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
                "#F0E442", "#bc5d58", "#0d98ba")
 
 custom_colors2<- c("#0d98ba","#7366bd","#de5d83","#cb4154","#b4674d","#ff7f49",
-"#ea7e5d","#b0b7c6"le,"#ffff99","#00CC99","#ffaacc","#dd4492",
-"#1dacd6","#bc5d58","#dd9475") 
+                   "#ea7e5d","#b0b7c6"le,"#ffff99","#00CC99","#ffaacc","#dd4492",
+                   "#1dacd6","#bc5d58","#dd9475") 
+
+custom_colors <- c('#E9C31E','#E28426','#DF6026','#AC2324','#D14889',
+                   '#861949','#95257C','#29265F','#0A6597','#33B4DE',
+                   '#236E38','#48A548','#8EBD40','#738077','#754C29')
+
 
 plot_state_hhmv_MVphase <- 
   ggplot(data= local_all_MMR, 
          aes(x=PhaseByMVQuintile, 
-             y=CumulDist/CumulHH, 
+             y=CumulDist/CumulHH,
+             #linetype = Scemario_name,
              colour = Scenario_name)) +
-  geom_line(size =3) +
+  geom_line(size =2,
+            aes(linetype=Scenario_name)) +
   labs(title = "Cumulative Average of MV Line", 
        x = "Phases by Equal MV Quintile", 
        y="MV Line per Household [m/HH]", 
        colour = "Scenarios") +
   uglify_tl() +
   #scale_colour_manual(values=cbPalette) +
-  scale_colour_manual(values=custom_colors2) +
+  scale_colour_manual(values=custom_colors) +
   xlim(0.3,5) +
-  scale_linetype_manual(values=c("dotdash", "dotted"))
+  scale_linetype_manual(values=c("dotdash", "dotted","dotdash", "dotted","longdash",
+                                 "dotdash", "dotted","dotdash", "dotted","longdash",
+                                 "dotdash", "dotted","dotdash", "dotted","longdash"))
 
 ggsave(plot=plot_state_hhmv_MVphase, filename="CastaliaScenarios-CumulativeMVAvg_Per_MVPhase.pdf", scale=2)
 
