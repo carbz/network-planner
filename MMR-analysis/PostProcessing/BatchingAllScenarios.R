@@ -554,12 +554,39 @@ ggsave(plot=plot_state_costs, filename="StatewiseCosts.pdf")
 
 
 plot_nat_costs <- 
-  ggplot(data= farsighted_grid, 
+  ggplot(data= farsighted_grid_all_settlements, 
          aes(x=seq_fs, 
-             y=CumulativeNetworkExtent.m/CumulativeHousesConnected.qty)) +
+             y=CumulativeNetworkExtent.m/CumulativeHousesConnected.qty,
+             colour = Scenario)) +
+  geom_point(size=20) +
+  labs(title = "Myanmar National Grid Rollout", 
+       x = "Farsighted Sequence of Rollout", 
+       y="Cum. Avg. MV Line per Household [m/HH]", 
+       colour = "Scenarios") +
+  scale_colour_manual(values=custom_colors) +
+  theme(text=element_text(size=40),
+        legend.text = element_text(size=30),
+        axis.text = element_text(size=20),
+        axis.ticks=element_blank(), 
+        panel.grid=element_blank(),
+        panel.background=element_blank(),
+        legend.position=c(0,1), #x=0=left, y=1=top
+        legend.justification=c(0,1))
+plot_nat_costs
+
+
+farsighted_grid <- farsighted_grid[order(farsighted_grid$near.sighted.sequence),]
+
+farsighted_grid <- mutate(farsighted_grid, 
+                          nearsighted.CumulativeNetworkExtent.m = cumsum(dist),
+                          nearsighted.CumulativeHousesConnected.qty = cumsum(Demand..household....Target.household.count))
+
+plot_nat_costs_ns <- ggplot(data= farsighted_grid, 
+         aes(x=near.sighted.sequence, 
+             y=nearsighted.CumulativeNetworkExtent.m/nearsighted.CumulativeHousesConnected.qty)) +
   geom_line(size =3) +
   labs(title = "Cumulative Average of MV Line", 
-       x = "Farsighted Sequence of Rollout", 
+       x = "Nearsighted Sequence of Rollout", 
        y="MV Line per Household [m/HH]", 
        colour = "Scenarios") +
   theme(text=element_text(size=40),
@@ -570,7 +597,47 @@ plot_nat_costs <-
         panel.background=element_blank(),
         legend.position=c(0,1), #x=0=left, y=1=top
         legend.justification=c(0,1))
-plot_nat_costs
+plot_nat_costs_ns
+
+farsighted_grid$compare_sequence <- farsighted_grid$seq_fs
+farsighted_grid$compare_sequence[which(is.na(farsighted_grid$compare_sequence))] <- farsighted_grid$near.sighted.sequence
+
+compare_rollouts<- farsighted_grid[c('seq_fs',
+                                       'CumulativeNetworkExtent.m',
+                                       'CumulativeHousesConnected.qty')]
+names(compare_rollouts) <- c('Sequence','NetworkInstalled','HouseholdsConnected')
+compare_rollouts$SequenceAlgorithm <- 'farsighted'
+
+compare_rollouts2<- farsighted_grid[c('near.sighted.sequence',
+                                      'nearsighted.CumulativeNetworkExtent.m',
+                                      'nearsighted.CumulativeHousesConnected.qty')]
+names(compare_rollouts2) <- c('Sequence','NetworkInstalled','HouseholdsConnected')
+compare_rollouts2$SequenceAlgorithm <- 'nearsighted'
+
+compare_rollouts <- rbind.fill(compare_rollouts2, compare_rollouts)
+ 
+compare_rollouts <- 
+  ggplot(data = compare_rollouts, 
+         aes(x=Sequence, 
+             y=NetworkInstalled/HouseholdsConnected,
+             colour = SequenceAlgorithm)) +
+  geom_line(size =3) +
+  labs(title = "Myanamr National Grid Rollout", 
+       x = "Sequence [Settlements Connected]", 
+       y="Cum. Avg. of MV Line per Household [m/HH]", 
+       colour = "Algorithm") +
+  theme(text=element_text(size=40),
+        legend.text = element_text(size=30),
+        axis.text = element_text(size=20),
+        axis.ticks=element_blank(), 
+        panel.grid=element_blank(),
+        panel.background=element_blank(),
+        legend.position=c(0,1), #x=0=left, y=1=top
+        legend.justification=c(0,1))
+
+compare_rollouts
+   
+
 
 
 
