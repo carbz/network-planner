@@ -73,6 +73,7 @@ for (i in 1:length(directory_names)){
   library(tools)
   library(rgdal)
   library(geosphere) # must be v1.3-8 or greater
+  library(stringr)
   
   output_dir_name <- paste0(path_name,directory_names[i])
   input_point_csv_name <- local
@@ -227,7 +228,6 @@ EA_codes <- c('order','piece','group','id','root','branch','dist','depth',
               'far.sighted.sequence','CumulHH','PhaseByHHQuintile','PhaseByHHQuintRnd',
               'CumulDist','PhaseByMVQuintile','PhaseByMVQuintRnd','BinsBySett.Size') 
 
-GIS_names <- c()
 
 i=10
 local_all_MMR <- as.data.frame(NULL)
@@ -245,6 +245,7 @@ for (i in 1:length(castalia_scenarios)){
 }
 write.csv(local_all_MMR, '~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/master_merged/local_lite-AllStates-1000kWhDemand-V20140507.csv', row.names=F)
 
+local_all_MMR <- read.csv('local_lite-AllStates-1000kWhDemand-V20140507.csv')
 ##Develop a composite view of Proposed lines
 
 #original scenarios live here:
@@ -396,11 +397,13 @@ farsighted_grid <- far_sighted_rollout(MMR_grid_cumulatives)
 write.csv(farsighted_grid, paste0(path_name,'merged_tests/metrics-local-farsighted-20140507.csv'), 
           row.names=F)
 
+farsighted_grid <- read.csv('metrics-local-farsighted-20140507.csv')
+
 ##Edwin wants all settlements 
 farsighted_grid$XYID <- paste0(str_sub(as.character(farsighted_grid$long*100000),end=7L),str_sub(as.character(farsighted_grid$lat*100000),end=7L))
 farsighted_grid_all_settlements <- merge(local_all_orig, farsighted_grid, by='XYID', all=T)
 farsighted_grid_all_settlements <- farsighted_grid_all_settlements[order(farsighted_grid_all_settlements$far.sighted.sequence),]
-write.csv(farsighted_grid_all_settlements, paste0(path_name,'metrics-local-farsighted-20140508.csv'), 
+write.csv(farsighted_grid_all_settlements, paste0(path_name,'metrics-local-farsighted-20140516.csv'), 
           row.names=F)
 
 
@@ -454,22 +457,6 @@ ggsave(plot=plot_state_hhmv_HHphase, filename="CastaliaScenarios-CumulativeMVAvg
 
 
 ##****COLORS****##
-#http://www.r-bloggers.com/crayon-colors-in-r/?utm_source=feedburner&utm_medium=email&utm_campaign=Feed%3A+RBloggers+%28R+bloggers%29
-library(devtools)
-install_github("kbroman/broman")
-library(broman)
-plot_crayons() 
-custom_colors <- brocolors("crayons")[15:29]
-row.names(custom_colors)
-
-cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", 
-               "#F0E442", "#0072B2", "#D55E00", "#CC79A7", 
-               "#000000", "#E69F00", "#56B4E9", "#009E73", 
-               "#F0E442", "#bc5d58", "#0d98ba")
-
-custom_colors2<- c("#0d98ba","#7366bd","#de5d83","#cb4154","#b4674d","#ff7f49",
-                   "#ea7e5d","#b0b7c6"le,"#ffff99","#00CC99","#ffaacc","#dd4492",
-                   "#1dacd6","#bc5d58","#dd9475") 
 
 custom_colors <- c('#E9C31E','#E28426','#DF6026','#AC2324','#D14889',
                    '#861949','#95257C','#29265F','#0A6597','#33B4DE',
@@ -477,27 +464,29 @@ custom_colors <- c('#E9C31E','#E28426','#DF6026','#AC2324','#D14889',
 
 
 plot_state_hhmv_MVphase <- 
-  ggplot(data= local_all_MMR, 
-         aes(x=PhaseByMVQuintile, 
-             y=CumulDist/CumulHH,
-             #linetype = Scemario_name,
-             colour = Scenario_name)) +
-  geom_line(size =2,
-            aes(linetype=Scenario_name)) +
-  labs(title = "Cumulative Average of MV Line", 
-       x = "Phases by Equal MV Quintile", 
-       y="MV Line per Household [m/HH]", 
-       colour = "Scenarios") +
-  uglify_tl() +
-  #scale_colour_manual(values=cbPalette) +
-  scale_colour_manual(values=custom_colors) +
-  xlim(0.3,5) +
-  scale_linetype_manual(values=c("dotdash", "dotted","dotdash", "dotted","longdash",
-                                 "dotdash", "dotted","dotdash", "dotted","longdash",
-                                 "dotdash", "dotted","dotdash", "dotted","longdash"))
+h
+  geom_hline(yintercept=c(6), linetype="dashed") 
 
-ggsave(plot=plot_state_hhmv_MVphase, filename="CastaliaScenarios-CumulativeMVAvg_Per_MVPhase.pdf", scale=2)
 
+  
+#   scale_linetype_manual(values=c("dotdash", "dotted","dotdash", "dotted","longdash",
+#                                  "dotdash", "dotted","dotdash", "dotted","longdash",
+#                                  "dotdash", "dotted","dotdash", "dotted","longdash"))
+
+#1 ggsave(plot=plot_state_hhmv_MVphase, filename="CastaliaScenarios-CumulativeMVAvg_Per_MVPhase.pdf", scale=2)
+ggsave(file="States_HHs_MVcostsV6.pdf", plot=plot_state_hhmv_MVphase)
+
+##2 OR this way, sometimes plots do better in vector graphics
+svg('States_HHs_MVcostsV5.svg')
+plot(plot_state_hhmv_MVphase)# make plot
+dev.off()
+
+#3 Use Cairo
+svg(filename = 'States_HHs_MVcostsV7.svg',
+    width = 7, height = 7, pointsize = 1,
+    onefile = FALSE, family = "sans")
+plot(plot_state_hhmv_MVphase)# make plot
+dev.off()
 
 plot_state_hhmv_cumHH <- 
   ggplot(data= local_all_MMR, 
@@ -512,6 +501,11 @@ plot_state_hhmv_cumHH <-
   uglify_tr() 
 ggsave(plot=plot_state_hhmv_cumHH, filename="CastaliaScenarios-CumulativeMVAvg_Per_CumHHs.pdf", scale=2)
 
+#Get max values of each state
+State_Max_cums <- ddply(local_all_MMR, .(Scenario_name), summarize,
+                        FinalMVBurden.mperHH= sum(dist, na.rm=T)/sum(Demand..household....Target.household.count,na.rm=T),
+                        TotalHouseholds.1k = sum(Demand..household....Target.household.count,na.rm=T)/1000)
+write.csv(State_Max_cums, 'State-MaxMVperHH-cumulativesV3.csv', row.names=F)                        
 
 plot_state_mv_hh <- 
   ggplot(data= local_all_MMR, 
@@ -571,7 +565,10 @@ plot_nat_costs <-
         panel.grid=element_blank(),
         panel.background=element_blank(),
         legend.position=c(0,1), #x=0=left, y=1=top
-        legend.justification=c(0,1))
+        legend.justification=c(0,1)) +
+  geom_hline(yintercept=c(5,6), linetype="dashed") +
+  geom_text(aes(0,c(5,6),label = c('5m cutoff','6m cutoff'), vjust = -1))
+
 plot_nat_costs
 
 
@@ -596,7 +593,8 @@ plot_nat_costs_ns <- ggplot(data= farsighted_grid,
         panel.grid=element_blank(),
         panel.background=element_blank(),
         legend.position=c(0,1), #x=0=left, y=1=top
-        legend.justification=c(0,1))
+        legend.justification=c(0,1)) +
+  geom_hline(yintercept=c(5,6), linetype="dashed") #+
 plot_nat_costs_ns
 
 farsighted_grid$compare_sequence <- farsighted_grid$seq_fs
