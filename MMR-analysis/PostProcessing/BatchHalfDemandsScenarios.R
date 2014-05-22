@@ -37,7 +37,7 @@ EA_codes <- c('order','piece','group','id','root','branch','dist','depth',
               'CumulDist','PhaseByMVQuintile','PhaseByMVQuintRnd','BinsBySett.Size') 
 
 
-### MERGE SCENARIOS TOGETHER ####
+### 0. MERGE SCENARIOS TOGETHER ####
 local_all_orig <- as.data.frame(NULL)
 for (i in 1:length(directory_names)){
   print(i) 
@@ -89,7 +89,7 @@ for (i in 1:length(directory_names)){
 
 local_all_orig$XYID <- paste0(str_sub(as.character(local_all_orig$X*100000),end=7L),str_sub(as.character(local_all_orig$Y*100000),end=7L))
 
-##Looking at conflicting electrification types(Metric...System) for same settlements
+##Remove conflicting electrification types(Metric...System) for same settlements
 local_all_orig <- local_all_orig[order(local_all_orig$Metric...System),]#get grids to the top
 duplicates <- local_all_orig[which(duplicated(local_all_orig$XYID, 
                                               fromLast=FALSE)),]#minimize grid nodes being removed
@@ -104,5 +104,3 @@ write.csv(local_all_orig,
           '~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/networkplannerR_data/metrics-local-All-500kWh.csv', row.names=F)
 writeLinesShape(all_lines, 
                 '~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/networks-proposed-ALL-500kWh.shp')
-
-
