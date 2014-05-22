@@ -66,19 +66,19 @@ for (i in 1:length(directory_names)){
   ##********************************************************##
   ##*********Step 2: Combine networks-proposed.shp**********##
   ##********************************************************##
-  
-  proposed_i <- readShapeLines(paste0(path_name,directory_names[i],'/networks-proposed.shp'))
-  # change their IDs so they don't conflict
-  proposed_i <- spChFIDs(proposed_i, as.character(paste0(scenario,'.', proposed_i$FID)))
-  proposed_i$FID <- row.names(proposed_i)
-  
-  if(i==1) {
-    #Designate merged file
-    all_lines <- proposed_i
-    }else {
-      # bind to previous dataset 'MVLineType' attribute
-      all_lines <- rbind(proposed_i, all_lines) 
-    }
+#   
+#   proposed_i <- readShapeLines(paste0(path_name,directory_names[i],'/networks-proposed.shp'))
+#   # change their IDs so they don't conflict
+#   proposed_i <- spChFIDs(proposed_i, as.character(paste0(scenario,'.', proposed_i$FID)))
+#   proposed_i$FID <- row.names(proposed_i)
+#   
+#   if(i==1) {
+#     #Designate merged file
+#     all_lines <- proposed_i
+#     }else {
+#       # bind to previous dataset 'MVLineType' attribute
+#       all_lines <- rbind(proposed_i, all_lines) 
+#     }
 } 
 
 ##************************************************************##
@@ -104,3 +104,60 @@ write.csv(local_all_orig,
           '~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/networkplannerR_data/metrics-local-All-500kWh.csv', row.names=F)
 writeLinesShape(all_lines, 
                 '~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/networks-proposed-ALL-500kWh.shp')
+
+
+
+#sort NetworkPlanner's "grid" settlements nodes based on a global priority scheme 
+#while denoting each unique branch they're originating from 
+#using an implementation of Prim's algorithm on the priortized grid network resulting from Zaimings script.  
+
+source('~/github/network-planner/Prioritized/NetworkPlanner_SystemRollout_Greedy.R')
+source('~/github/network-planner/Prioritized/Custom_Rollout_Functions.R')
+source('~/github/network-planner/IDN-analysis/PostProcessing/interpret_commonfunctions.R')
+source('~/github/network-planner/Prioritized/NP_rollout_common_functions.R')
+
+
+#Use output of priortized.grid function as input to far-sighted optimized rollout algorithim 
+#takes a shapefile (network) and csv (nodal descriptions and weights) 
+#and suggests a sequential, phased roll-out of the system based on a greedy, one step ahead view
+#***RUNTIME ~08:00***********
+local_all_orig$Settlement.id <- row.names(local_all_orig)
+proj4 <- read.csv(paste0(path_name,directory_names[i],"/metrics-local.csv"), nrows=1, header = FALSE)[1]
+
+all_MMR_nearsighted <- prioritized.grid.greedy(local_all_orig,all_lines,proj4)
+
+write.csv(all_MMR_nearsighted, 
+          '~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/networkplannerR_data/metrics-local-All-500kWh-greedyrank.csv', row.names=F)
+
+##***************************
+#Explicitly define greedy grid output as a dataframe
+#Sometimes I need to explicitly call the fataframe for greedy.grid - arghhhh
+if (length(all_MMR_nearsighted)==2){
+  print("Houston, we have a problem with our dataframe")
+  all_MMR_nearsighted  <- as.data.frame(all_MMR_nearsighted[1])
+}
+
+#Function to determine downstream summations for greedy grid
+MMR_grid_cumulatives <- downstream.sum.calculator(all_MMR_nearsighted)
+
+write.csv(MMR_grid_cumulatives, paste0(path_name,'merged_tests/ayeyarwady/metrics-local-nearsightedrank+cumulatives.csv'), 
+          row.names=F)
+
+##Output The intermediates
+metrics_local_with_sequence <- (MMR_grid_cumulatives[which(!(duplicated(MMR_grid_cumulatives$id))),])
+proposed_with_rollout <- merge(all_lines, metrics_local_with_sequence, by.x = "FID", by.y = "id")
+writeLinesShape(proposed_with_rollout, 
+                paste0(paste0(path_name,
+                              'merged_tests/master_merged/networks-proposed-with-Near-rollout-20140506.shp'), 
+                       row.names=F))
+
+
+#Far Sighted function to improve near-sighted greedy grid
+#* **********************
+farsighted_grid <- far_sighted_rollout(MMR_grid_cumulatives)
+#******************************
+write.csv(farsighted_grid, paste0(path_name,'merged_tests/metrics-local-farsighted-20140507.csv'), 
+          row.names=F)
+
+farsighted_grid <- read.csv('metrics-local-farsighted-20140507.csv')
+
