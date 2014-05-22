@@ -140,8 +140,9 @@ if (length(all_MMR_nearsighted)==2){
 #Function to determine downstream summations for greedy grid
 MMR_grid_cumulatives <- downstream.sum.calculator(all_MMR_nearsighted)
 
-write.csv(MMR_grid_cumulatives, paste0(path_name,'merged_tests/ayeyarwady/metrics-local-nearsightedrank+cumulatives.csv'), 
-          row.names=F)
+write.csv(MMR_grid_cumulatives, 
+          '~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/networkplannerR_data/metrics-local-All-500kWh-greedyrank-cums.csv', row.names=F)
+
 
 ##Output The intermediates
 metrics_local_with_sequence <- (MMR_grid_cumulatives[which(!(duplicated(MMR_grid_cumulatives$id))),])
@@ -156,8 +157,84 @@ writeLinesShape(proposed_with_rollout,
 #* **********************
 farsighted_grid <- far_sighted_rollout(MMR_grid_cumulatives)
 #******************************
-write.csv(farsighted_grid, paste0(path_name,'merged_tests/metrics-local-farsighted-20140507.csv'), 
+write.csv(farsighted_grid,
+          '~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/networkplannerR_data/metrics-local-All-500kWh-farsighted.csv', 
           row.names=F)
+          
 
-farsighted_grid <- read.csv('metrics-local-farsighted-20140507.csv')
+#####*************************************#########
+######Define some typical Useful Values ###########
+#####*************************************#########
+
+
+##Phasing, Rollout and Costs
+#Order the suggested grid path by optimal sequence
+farsighted_grid$seq_fs <- farsighted_grid$far.sighted.sequence#shapefile chops longer names
+farsighted_grid <- farsighted_grid[order(farsighted_grid$far.sighted.sequence),]
+
+#Develop cummulative sum of network length metric
+farsighted_grid <- mutate(farsighted_grid, 
+                          CumulativeNetworkExtent.m = cumsum(dist),
+                          CumulativeHousesConnected.qty = cumsum(Demand..household....Target.household.count))
+
+#Scalar Values of region before expansion efforts began
+percent_houses_connected_at_start <- 0
+houses_connected_at_start <- 0
+total_houses <- sum(local$Demand..household....Target.household.count, na.rm=T)
+new_grid_connections <- max(farsighted_grid$CumulativeHousesConnected.qty)
+
+#Establish some Castalia-specific Metrics 
+farsighted_grid <- mutate(farsighted_grid, 
+                          MVLinePerConnection = dist/Demand..household....Target.household.count,
+                          TransformerCostPerConnection = System..grid....Transformer.cost/Demand..household....Target.household.count,
+                          PercentOfNewGridConnections = CumulativeHousesConnected.qty/new_grid_connections)
+
+#That lets us develop Phase bins
+farsighted_grid$Phase_HH <- NA
+total_phases <- 5
+phase_increment_house <- sum(farsighted_grid$Demand..household....Target.household.count)
+
+for (j in 1:total_phases){
+  
+  lower_cutoff <- (j-1)/total_phases*phase_increment_house
+  upper_cutoff <- j/total_phases*phase_increment_house
+  
+  farsighted_grid$Phase_HH[which((farsighted_grid$CumulativeHousesConnected.qty >= lower_cutoff) &
+                                   (farsighted_grid$CumulativeHousesConnected.qty <= upper_cutoff))] <- j
+  
+}
+
+farsighted_grid$Phase_MV <- NA
+total_phases <- 5
+phase_increment_grid <- sum(farsighted_grid$dist)
+
+for (j in 1:total_phases){
+  
+  lower_cutoff <- (j-1)/total_phases*phase_increment_grid
+  upper_cutoff <- j/total_phases*phase_increment_grid
+  
+  farsighted_grid$Phase_MV[which((farsighted_grid$CumulativeNetworkExtent.m >= lower_cutoff) &
+                                   (farsighted_grid$CumulativeNetworkExtent.m <= upper_cutoff))] <- j
+}
+#####*************************************#########
+#####*************************************#########
+
+
+##Output The Good stuff
+metrics_local_with_sequence <- (farsighted_grid[which(!(duplicated(farsighted_grid$id))),])
+proposed_with_rollout <- merge(all_lines, 
+                               metrics_local_with_sequence, 
+                               by.x = "FID", by.y = "id", all=TRUE)
+writeLinesShape(proposed_with_rollout, 
+                paste0(path_name,"merged_all_states/networks-proposed-with-rollout-20140523.shp"))
+
+
+##Edwin wants all settlements 
+farsighted_grid$XYID <- paste0(str_sub(as.character(farsighted_grid$long*100000),end=7L),str_sub(as.character(farsighted_grid$lat*100000),end=7L))
+farsighted_grid_all_settlements <- merge(local_all_orig, farsighted_grid, by='XYID', all=T)
+farsighted_grid_all_settlements <- farsighted_grid_all_settlements[order(farsighted_grid_all_settlements$far.sighted.sequence),]
+write.csv(farsighted_grid_all_settlements, 
+          paste0(path_name,'merged_all_states/metrics-local-All-500kWh-farsighted-allsettlements.csv'), 
+          row.names=F)
+          
 
