@@ -231,10 +231,19 @@ writeLinesShape(proposed_with_rollout,
 
 ##Edwin wants all settlements 
 farsighted_grid$XYID <- paste0(str_sub(as.character(farsighted_grid$long*100000),end=7L),str_sub(as.character(farsighted_grid$lat*100000),end=7L))
+
+shared_col_names <- intersect(names(farsighted_grid),names(local_all_orig))
+
 farsighted_grid_all_settlements <- merge(local_all_orig, farsighted_grid, by='XYID', all=T)
+farsighted_grid_all_settlementsV2 <- merge(local_all_orig, farsighted_grid, by=shared_col_names, all=T)
+
 farsighted_grid_all_settlements <- farsighted_grid_all_settlements[order(farsighted_grid_all_settlements$far.sighted.sequence),]
-write.csv(farsighted_grid_all_settlements, 
-          paste0(path_name,'merged_all_states/metrics-local-All-500kWh-farsighted-allsettlements.csv'), 
+write.csv(farsighted_grid_all_settlementsV2, 
+          paste0(path_name,'merged_all_states/metrics-local-All-500kWh-farsighted-allsettlements-V2.csv'), 
           row.names=F)
           
+
+MMR_polygon_tracts <- readShapePoly(
+  "~/Dropbox/Myanmar_GIS/Village_Tracts/all_village_tracts.shp")
+
 
