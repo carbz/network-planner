@@ -29,6 +29,7 @@ MMR_polygon <- readShapePoly(
   "~/Dropbox/Myanmar_GIS/Admin_Boundaries/3_adm1_states_regions2_250k_mimu/adm1_states_regions2_250k_mimu.shp")
 MMR_polygon_twps <- readShapePoly(
   "~/Dropbox/Myanmar_GIS/Admin_Boundaries/5_adm3_townships1_250k_mimu/adm3_townships1_250k_mimu.shp")
+polygon <- MMR_polygon_twps
 
 #3 Line Data from Existing Grid
 existing <- importShapefile(
@@ -69,13 +70,16 @@ comprehensive_plot <- function(polygon, proposed, existing, nodes, bounding_box)
       scale_fill_brewer(type="seq") +
     
     geom_path(data=existing, 
-              aes(x=X, y=Y, group=PID), color='black') + 
+              aes(x=X, y=Y, group=PID), 
+              size=3, color='black') + 
     geom_path(data=proposed, 
-              aes(x=X, y=Y, group=PID), color='blue') + 
+              aes(x=X, y=Y, group=PID), 
+              size=3, color='blue') + 
     scale_size_manual(values=c(.5,1.5)) + 
-      22scale_linetype_manual(values=c("solid", "dotdash")) + 
+      scale_linetype_manual(values=c("solid", "dotdash")) + 
 
-    geom_point(data=nodes, aes(x = X, y = Y, colour = Metric...System)) +
+    geom_point(data=nodes, aes(x = X, y = Y, colour = Metric...System),
+               size = 6) +
       geom_text(data=nodes, aes(x = X, y = Y,label=Name), 
                 size = 10, 
                 fontface=3,
@@ -131,21 +135,45 @@ polygon.bounds <- function(polygon, i) {
 
 
 ##test it
-i=5
-nodes <- (subset(InMMR, TS_PCODE==twps[i]))
+  
+  
+#Output Directory##
+output_directory <- '~/Dropbox/Myanmar/6-FinalReport+Training/NPTMission/WorkForMadameMimi/R-MapImages/TownshipMaps/'
+i=34
 
-proposed_subset <- polyline.within(nodes, proposed)
-existing_subset <- polyline.within(nodes, existing)
-
-bounding_box <- polygon.bounds(polygon,i)
-
-
-comprehensive_plot(MMR_polygon_twps,
-                   proposed_subset,
-                   existing_subset,
-                   nodes,
-                   bounding_box)
-
+for (i in 1:length(twps)){
+  
+  nodes <- (subset(InMMR, TS_PCODE==twps[i]))
+  
+  proposed_subset <- polyline.within(nodes, proposed)
+  existing_subset <- polyline.within(nodes, existing)
+  
+  bounding_box <- polygon.bounds(polygon,i)
+  
+  
+  twp_plot <- comprehensive_plot(MMR_polygon_twps,
+                                 proposed_subset,
+                                 existing_subset,
+                                 nodes,
+                                 bounding_box)
+  
+  #Output
+  #My favorite plot
+  
+  #Aspect Ratio: height to width
+  aspect_ratio <- (max(nodes$Y)-min(nodes$Y))/(max(nodes$X)-min(nodes$X))
+  width <- 1050 #desired pixel width of image outputs
+  
+  png(filename=paste0(output_directory,
+                      paste0("/",
+                             polygon[[2]][i],
+                             '_',
+                             polygon[[6]][i],
+                             '_NEP-results.png')), 
+      width = width, height=width*aspect_ratio)
+  plot(twp_plot)
+  dev.off()
+}
 
 
 #Also establish a blank_theme template from Prabhas' recommendations 
@@ -163,8 +191,8 @@ uglify_theme <- function() {
       axis.ticks=element_blank(), 
       panel.grid=element_blank(),
       panel.background=element_blank(),
-      legend.position=c(1,1), #x=0=left, y=0=top
-      legend.justification=c(0,1))
+      #legend.position=c(1,1), #x=0=left, y=0=top
+      #legend.justification=c(0,1))
 }
 
 
