@@ -39,6 +39,9 @@ existing <- importShapefile(
 proposed <- importShapefile(
   "~/Desktop/MapboxShapefiles-MMR/networks-proposed-1000kWh")
 
+proposed_attributes <- readShapeLines(
+  "~/Desktop/MapboxShapefiles-MMR/networks-proposed-1000kWh.shp")
+
 #5Road and River Data later 
 
 
@@ -84,8 +87,9 @@ comprehensive_plot <- function(polygon, proposed, existing, nodes, bounding_box)
     geom_point(data=nodes, aes(x = X, y = Y, colour = Metric...System),
                size = 6) +
       geom_text(data=nodes, aes(x = X, y = Y,label=Name), 
-                size = 10, 
+                size = 6, 
                 fontface=3,
+                position=position_jitter(w = 0.01, h = 0.01),
                 colour = "white",vjust = 0, hjust=0) + 
   
     #scale_shape_manual(values=c(20, 11), labels=c("BIG", "BPS")) +
@@ -141,14 +145,14 @@ polygon.bounds <- function(polygon, i) {
   
 #Output Directory##
 output_directory <- '~/Dropbox/Myanmar/6-FinalReport+Training/NPTMission/WorkForMadameMimi/R-MapImages/TownshipMaps/'
-i=34
+i=1
 
 ##tripped up at i=27 ???, 50 seems to be okay
-for (i in 73:length(twps)){
+for (i in 1:length(twps)){
   
   nodes <- (subset(InMMR, TS_PCODE==twps[i]))
  
-  proposed_subset <- polyline.within(nodes, proposed)
+  proposed_subset <- polyline.within(nodes, proposed)  
 #   existing_subset <- polyline.within(nodes, existing)
 # 
 # proposed_subset <- proposed
@@ -169,7 +173,7 @@ existing_subset <- existing
   
   #Aspect Ratio: height to width
   aspect_ratio <- (max(nodes$Y)-min(nodes$Y))/(max(nodes$X)-min(nodes$X))
-  width <- 1050 #desired pixel width of image outputs
+  width <- 1500 #desired pixel width of image outputs
   
   png(filename=paste0(output_directory,
                       i,
@@ -177,8 +181,7 @@ existing_subset <- existing
                       polygon[[2]][i],
                       '-',
                       polygon[[6]][i],
-                      '.png')) 
-#       width = width, height=width*aspect_ratio)
+                      '.png'), width = width, height=width*aspect_ratio)
   plot(twp_plot)
   dev.off()
 }
@@ -192,46 +195,42 @@ blank_theme <- function() {
     panel.background=element_blank())
 }
 
-uglify_theme <- function() {
-  theme(text=element_text(size=40),
+uglify_theme <- function() 
+  {theme(text=element_text(size=40),
       legend.text = element_text(size=30),
       axis.text = element_text(size=20),
       axis.ticks=element_blank(), 
       panel.grid=element_blank(),
-      panel.background=element_blank(),
+      panel.background=element_blank())
       #legend.position=c(1,1), #x=0=left, y=0=top
       #legend.justification=c(0,1))
 }
 
 
 
-#Subset the hell out of metrics local
-local_lite <- metrics_local[,c("Name",
-                               "State","District","Township",
-                               "X","Y",
-                               "Metric...System",
-                               "far.sighted.sequence",
-                               "Demand..household....Target.household.count",
-                               "Demand...Projected.nodal.demand.per.year",
-                               "System..grid....Transformer.cost",
-                               "Demographics...Population.count",
-                               "Demographics...Projected.population.count",
-                               "Total.Downstream.Demand.kWh",
-                               "Total.Downstream.Network.Extent.m",
-                               "CumulDist","CumulHH",
-                               "PhaseByMVQuintile",
-                               "PhaseByHHQuintile")]
-                               
-
-write.csv(local_lite,
-          '~/Desktop/MapboxShapefiles-MMR/metrics-local-AllStates-1000kWhDemand-lite.csv',
-          row.names=F)
-                               
-                               
-                               
+# #Subset the hell out of metrics local
+# local_lite <- metrics_local[,c("Name",
+#                                "State","District","Township",
+#                                "X","Y",
+#                                "Metric...System",
+#                                "far.sighted.sequence",
+#                                "Demand..household....Target.household.count",
+#                                "Demand...Projected.nodal.demand.per.year",
+#                                "System..grid....Transformer.cost",
+#                                "Demographics...Population.count",
+#                                "Demographics...Projected.population.count",
+#                                "Total.Downstream.Demand.kWh",
+#                                "Total.Downstream.Network.Extent.m",
+#                                "CumulDist","CumulHH",
+#                                "PhaseByMVQuintile",
+#                                "PhaseByHHQuintile")]
+#                                
+# 
+# write.csv(local_lite,
+#           '~/Desktop/MapboxShapefiles-MMR/metrics-local-AllStates-1000kWhDemand-lite.csv',
+#           row.names=F)
+#                                
                                
                                
-                               )
-                            ]
-
-
+                               
+                           
