@@ -56,29 +56,43 @@ table(metrics_local$Metric...System)
 dim(metrics_local)
 
 #unique townships to plot by
-twps <- unique(InMMR$TS)
+twps <- unique(InMMR$TS_PCODE)
 
 ##General Plot Function Defined ##
-comprehensive_plot <- function(polygon, proposed, existing, points) {
+comprehensive_plot <- function(polygon, proposed, existing, nodes, bounding_box) {
   
   ggplot() + 
-    geom_polygon(data = polygon, aes(x=long,y=lat, group=group), alpha=0.5) +
+    geom_polygon(data = polygon, aes(x=long,y=lat, group=group), 
+                 colour="grey",
+                 size=2.5,
+                 alpha=1) +
+      scale_fill_brewer(type="seq") +
+    
     geom_path(data=existing, 
               aes(x=X, y=Y, group=PID), color='black') + 
     geom_path(data=proposed, 
               aes(x=X, y=Y, group=PID), color='blue') + 
     scale_size_manual(values=c(.5,1.5)) + 
-    #scale_linetype_manual(values=c("solid", "dotdash")) + 
-    geom_point(data=points, aes(x = X, y = Y, colour = Metric...System)) +
-    
+      22scale_linetype_manual(values=c("solid", "dotdash")) + 
+
+    geom_point(data=nodes, aes(x = X, y = Y, colour = Metric...System)) +
+      geom_text(data=nodes, aes(x = X, y = Y,label=Name), 
+                size = 10, 
+                fontface=3,
+                colour = "white",vjust = 0, hjust=0) + 
+  
     #scale_shape_manual(values=c(20, 11), labels=c("BIG", "BPS")) +
     #scale_color_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) + 
-    labs(title = paste0("NetworkPlanner Outputs: ","directory_names[i] for custom name"), 
+    labs(title = paste0("NEP Outputs: ",
+                        polygon[[6]][i],
+                        " Township"), 
          x = "Longitude", y="Latitude", 
          color = "Electrification Tech.", shape = "Settlement Data Source")+
     #coord_map()
-    coord_equal(xlim=c(min(points$X),max(points$X)),ylim=c(min(points$Y),max(points$Y)))
+    coord_equal(xlim=bounding_box[1:2],ylim=bounding_box[3:4])+
+    uglify_theme()
 }
+
 
 #Subset huge files
 
@@ -86,24 +100,72 @@ comprehensive_plot <- function(polygon, proposed, existing, points) {
 polyline.within <- function(nodes, lines) {  
   test_lines <- lines
   
-  proposed_lines_subset <- (test_lines[ which((test_lines$X > min(nodes$X-0.2)) & 
-                                               (test_lines$X < max(nodes$X+0.2)) & 
-                                               (test_lines$Y > min(nodes$Y-0.2)) & 
-                                               (test_lines$Y < max(nodes$Y+0.2)) ),])
+  proposed_lines_subset <- (test_lines[ which((test_lines$X > min(nodes$X-0.5)) & 
+                                               (test_lines$X < max(nodes$X+0.5)) & 
+                                               (test_lines$Y > min(nodes$Y-0.5)) & 
+                                               (test_lines$Y < max(nodes$Y+0.5)) ),])
   return(proposed_lines_subset)
+}
+
+##Pull the extents of a single township
+#i represents the observation within the polygon
+#polygon can be adminstrative polygon dataset
+
+
+polygon.bounds <- function(polygon, i) {  
+  
+  twp <- subset(polygon,TS_PCODE==twps[i])
+  
+  xy_polygon <- fortify(twp)
+  
+  x_min <- min(xy_polygon[1])
+  x_max <- max(xy_polygon[1])
+  y_min <- min(xy_polygon[2])
+  y_max <- max(xy_polygon[2])
+  
+  xlim <- c(x_min, x_max)
+  ylim <- c(y_min, y_max)
+  
+  return(c(xlim,ylim))
 }
 
 
 ##test it
-nodes <- (subset(InMMR, TS==twps[1]))
+i=5
+nodes <- (subset(InMMR, TS_PCODE==twps[i]))
 
 proposed_subset <- polyline.within(nodes, proposed)
 existing_subset <- polyline.within(nodes, existing)
 
+bounding_box <- polygon.bounds(polygon,i)
+
+
 comprehensive_plot(MMR_polygon_twps,
                    proposed_subset,
                    existing_subset,
-                   nodes)
+                   nodes,
+                   bounding_box)
+
+
+
+#Also establish a blank_theme template from Prabhas' recommendations 
+blank_theme <- function() {
+  theme(#axis.text=element_blank(), axis.title=element_blank(), 
+    axis.ticks=element_blank(),
+    panel.grid=element_blank(),
+    panel.background=element_blank())
+}
+
+uglify_theme <- function() {
+  theme(text=element_text(size=40),
+      legend.text = element_text(size=30),
+      axis.text = element_text(size=20),
+      axis.ticks=element_blank(), 
+      panel.grid=element_blank(),
+      panel.background=element_blank(),
+      legend.position=c(1,1), #x=0=left, y=0=top
+      legend.justification=c(0,1))
+}
 
 
 

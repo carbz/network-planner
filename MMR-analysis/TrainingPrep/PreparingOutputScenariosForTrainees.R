@@ -2,17 +2,19 @@
 
 #comprehensive composite dataset lives here
 #path_name <-"~/Dropbox/Myanmar/Demographics/Rural and Urban Population/Final_Pop/All_States_Village_Urban_Pop_Points_Merged_NodalOveridedValue_with_MIMU_and_GAD_Combined.csv"
-path_name <-"~/Dropbox/MMR-Training-docs/data/NEP-Data/NationalAggerate/National-Metric-local-09.17-full.csv"
-path_name <-"~/Dropbox/MMR-Training-docs/data/NEP-Data/NationalAggerate/NatlMlLite.csv"
+full_path_name <-"Desktop/National-Metric-local-09.17-lite.csv"
+lite_path_name <-"~/Dropbox/MMR-Training-docs/data/NEP Raw Data (Day 3)/NationalAggerate/NatlMlLite.csv"
 
 
 #read that csv in
-MMR_pop <- read.csv(path_name)
+MMR_pop <- read.csv(lite_path_name)
+MMR_pop_full <- read.csv(full_path_name)
+
 
 #break it up by State
 
 #No Good because there are 26 states with outliers
-#states <- unique(MMR_pop$State)
+states <- unique(MMR_pop$State)
 
 #Inside 'Ayeyawady' State?
 coordinates(MMR_pop) = ~Longitude+Latitude
