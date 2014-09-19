@@ -63,6 +63,8 @@ twps <- unique(InMMR$TS_PCODE)
 comprehensive_plot <- function(polygon, proposed, existing, nodes, bounding_box) {
   
   ggplot() + 
+    coord_equal(xlim=bounding_box[1:2],ylim=bounding_box[3:4])+
+    
     geom_polygon(data = polygon, aes(x=long,y=lat, group=group), 
                  colour="grey",
                  size=2.5,
@@ -70,13 +72,14 @@ comprehensive_plot <- function(polygon, proposed, existing, nodes, bounding_box)
       scale_fill_brewer(type="seq") +
     
     geom_path(data=existing, 
-              aes(x=X, y=Y, group=PID), 
-              size=3, color='black') + 
+                aes(x=X, y=Y, group=PID), 
+                size=3, color='black') + 
+    
     geom_path(data=proposed, 
               aes(x=X, y=Y, group=PID), 
               size=3, color='blue') + 
-    scale_size_manual(values=c(.5,1.5)) + 
-      scale_linetype_manual(values=c("solid", "dotdash")) + 
+      scale_size_manual(values=c(.5,1.5)) + 
+      scale_linetype_manual(values=c("solid", "dotdash")) +
 
     geom_point(data=nodes, aes(x = X, y = Y, colour = Metric...System),
                size = 6) +
@@ -93,7 +96,6 @@ comprehensive_plot <- function(polygon, proposed, existing, nodes, bounding_box)
          x = "Longitude", y="Latitude", 
          color = "Electrification Tech.", shape = "Settlement Data Source")+
     #coord_map()
-    coord_equal(xlim=bounding_box[1:2],ylim=bounding_box[3:4])+
     uglify_theme()
 }
 
@@ -141,13 +143,19 @@ polygon.bounds <- function(polygon, i) {
 output_directory <- '~/Dropbox/Myanmar/6-FinalReport+Training/NPTMission/WorkForMadameMimi/R-MapImages/TownshipMaps/'
 i=34
 
-for (i in 1:length(twps)){
+##tripped up at i=27 ???, 50 seems to be okay
+for (i in 27:length(twps)){
   
   nodes <- (subset(InMMR, TS_PCODE==twps[i]))
+ 
   
   proposed_subset <- polyline.within(nodes, proposed)
-  existing_subset <- polyline.within(nodes, existing)
-  
+#   existing_subset <- polyline.within(nodes, existing)
+# 
+# proposed_subset <- proposed
+existing_subset <- existing
+
+
   bounding_box <- polygon.bounds(polygon,i)
   
   
@@ -165,12 +173,13 @@ for (i in 1:length(twps)){
   width <- 1050 #desired pixel width of image outputs
   
   png(filename=paste0(output_directory,
-                      paste0("/",
-                             polygon[[2]][i],
-                             '_',
-                             polygon[[6]][i],
-                             '_NEP-results.png')), 
-      width = width, height=width*aspect_ratio)
+                      i,
+                      '-',
+                      polygon[[2]][i],
+                      '-',
+                      polygon[[6]][i],
+                      '.png')) 
+#       width = width, height=width*aspect_ratio)
   plot(twp_plot)
   dev.off()
 }
