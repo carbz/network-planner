@@ -106,10 +106,10 @@ comprehensive_plot <- function(polygon, proposed, existing, nodes, bounding_box)
 polyline.within <- function(nodes, lines) {  
   test_lines <- lines
   
-  proposed_lines_subset <- (test_lines[ which((test_lines$X > min(nodes$X-0.5)) & 
-                                               (test_lines$X < max(nodes$X+0.5)) & 
-                                               (test_lines$Y > min(nodes$Y-0.5)) & 
-                                               (test_lines$Y < max(nodes$Y+0.5)) ),])
+  proposed_lines_subset <- (test_lines[ which((test_lines$X > min(nodes$X-2.0)) & 
+                                               (test_lines$X < max(nodes$X+2.0)) & 
+                                               (test_lines$Y > min(nodes$Y-2.0)) & 
+                                               (test_lines$Y < max(nodes$Y+2.0)) ),])
   return(proposed_lines_subset)
 }
 
@@ -144,11 +144,10 @@ output_directory <- '~/Dropbox/Myanmar/6-FinalReport+Training/NPTMission/WorkFor
 i=34
 
 ##tripped up at i=27 ???, 50 seems to be okay
-for (i in 27:length(twps)){
+for (i in 73:length(twps)){
   
   nodes <- (subset(InMMR, TS_PCODE==twps[i]))
  
-  
   proposed_subset <- polyline.within(nodes, proposed)
 #   existing_subset <- polyline.within(nodes, existing)
 # 
