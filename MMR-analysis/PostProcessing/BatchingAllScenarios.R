@@ -74,6 +74,7 @@ for (i in 1:length(directory_names)){
   library(rgdal)
   library(geosphere) # must be v1.3-8 or greater
   library(stringr)
+  library(zoo)
   
   output_dir_name <- paste0(path_name,directory_names[i])
   input_point_csv_name <- local
@@ -241,9 +242,30 @@ for (i in 1:length(castalia_scenarios)){
   local$Scenario_name <- str_extract(directory_names[i], '[^-]*-[^-]*')
   local_lite <- local[,c(short_names,admin_codes,EA_codes)]
   
+  phase_increment_house<-sum(local$Demand..household....Target.household.count, na.rm=T)
+  local_lite$OnePercentHHBins <- NA
+  for (j in 1:100){
+    lower_cutoff <- (j-1)/100*phase_increment_house
+    upper_cutoff <- j/100*phase_increment_house
+    
+    local_lite$OnePercentHHBins[which((local_lite$CumulHH >= lower_cutoff) &
+                                             (local_lite$CumulHH <= upper_cutoff))] <- j
+  }
+  local_lite$FivePercentHHBins <- NA
+  for (j in 1:20){
+    lower_cutoff <- (j-1)/20*phase_increment_house
+    upper_cutoff <- j/20*phase_increment_house
+    
+    local_lite$FivePercentHHBins[which((local_lite$CumulHH >= lower_cutoff) &
+                                        (local_lite$CumulHH <= upper_cutoff))] <- j
+  }
+  
+  local_lite$MV.line.per.kwh.rollingmean <- rollmean(local_lite$dist/local_lite$Demand..household....Target.household.count, 
+                                                          101, na.pad=T)
+  
   local_all_MMR<- rbind.fill(local_lite,local_all_MMR)
 }
-write.csv(local_all_MMR, '~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/master_merged/local_lite-AllStates-1000kWhDemand-V20140507.csv', row.names=F)
+write.csv(local_all_MMR, '~/Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/master_merged/local_lite-AllStates-1000kWhDemand-V20140530.csv', row.names=F)
 
 local_all_MMR <- read.csv('local_lite-AllStates-1000kWhDemand-V20140507.csv')
 ##Develop a composite view of Proposed lines
@@ -441,6 +463,15 @@ uglify_tl <- function() {
         legend.justification=c(0,1)) 
 }
 
+blank_tl <- function() {
+  theme(axis.ticks=element_blank(), 
+        panel.grid=element_blank(),
+        panel.background=element_blank(),
+        legend.position=c(0.1,1), #x=0=left, y=1=top
+        legend.justification=c(0,1)) 
+}
+
+
 
 plot_state_hhmv_HHphase <- 
   ggplot(data= local_all_MMR, 
@@ -462,11 +493,99 @@ custom_colors <- c('#E9C31E','#E28426','#DF6026','#AC2324','#D14889',
                    '#861949','#95257C','#29265F','#0A6597','#33B4DE',
                    '#236E38','#48A548','#8EBD40','#738077','#754C29')
 
+custom_colors2<- c("#0d98ba","#7366bd","#de5d83","#cb4154","#b4674d","#ff7f49",
+                   "#ea7e5d","#b0b7c6","#ffff99","#00CC99","#ffaacc","#dd4492",
+                   "#1dacd6","#bc5d58","#dd9475") 
 
 plot_state_hhmv_MVphase <- 
-h
-  geom_hline(yintercept=c(6), linetype="dashed") 
+  ggplot(data= local_all_MMR, 
+         aes(x=PhaseByMVQuintile, 
+             y=CumulDist/CumulHH,
+             #linetype = Scemario_name,
+             colour = Scenario_name)) +
+  geom_line(size =2) +
+  labs(title = "Cumulative Average of MV Line", 
+       x = "Phases by Equal MV Quintile", 
+       y="MV Line per Household [m/HH]", 
+       colour = "Scenarios") +
+  uglify_tl() +
+  #scale_colour_manual(values=cbPalette) +
+  scale_colour_manual(values=custom_colors) +
+  xlim(0.3,5) 
 
+local_all_MMR_binned <- ddply(local_all_MMR, .(FivePercentHHBins, Scenario_name), summarize,
+                               MVperHH = sum(dist, na.rm=T)/sum(Demand..household....Target.household.count, na.rm=T),
+                               CumulativeNetworkExtent.m = sum(dist, na.rm=T),
+                               CumulativeHousesConnected.qty = max(Demand..household....Target.household.count, na.rm=T))
+plot_state_hhmv_5percents <- 
+  ggplot(data= local_all_MMR_binned, 
+         aes(x=FivePercentHHBins, 
+             y=MVperHH,
+             #linetype = Scemario_name,
+             colour = Scenario_name)) +
+  geom_line(size =1) +
+  labs(title = "5 Percent Bins Average of MV Line", 
+       x = "Phases by Equal MV Quintile", 
+       y="MV Line per Household [m/HH]", 
+       colour = "Scenarios") +
+  blank_tl() +
+  #scale_colour_manual(values=cbPalette) +
+  scale_colour_manual(values=custom_colors) 
+plot_state_hhmv_5percents
+#Plot it
+ggsave(file="Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/master_merged/States_HHs_MVcosts_BinsV1.pdf", 
+       plot=plot_state_hhmv_5percents)
+svg('Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/master_merged/States_HHs_MVcosts_BinsV2.svg')
+plot(plot_state_hhmv_5percents)# make plot
+dev.off()
+
+local_all_MMR_binned <- ddply(local_all_MMR, .(OnePercentHHBins, Scenario_name), summarize,
+                              MVperHH = sum(dist, na.rm=T)/sum(Demand..household....Target.household.count, na.rm=T),
+                              CumulativeNetworkExtent.m = sum(dist, na.rm=T),
+                              CumulativeHousesConnected.qty = max(Demand..household....Target.household.count, na.rm=T))
+plot_state_hhmv_1percents <- 
+  ggplot(data= local_all_MMR_binned, 
+         aes(x=OnePercentHHBins, 
+             y=MVperHH,
+             #linetype = Scemario_name,
+             colour = Scenario_name)) +
+  geom_line(size =1) +
+  labs(title = "1 Percent Bins Average of MV Line", 
+       x = "Phases by Equal MV Quintile", 
+       y="MV Line per Household [m/HH]", 
+       colour = "Scenarios") +
+  blank_tl() +
+  #scale_colour_manual(values=cbPalette) +
+  scale_colour_manual(values=custom_colors) 
+plot_state_hhmv_1percents
+#Plot it
+ggsave(file="Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/master_merged/States_HHs_MVcosts_1percentBinsV1.pdf", 
+       plot=plot_state_hhmv_1percents)
+svg('Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/master_merged/States_HHs_MVcosts_1percentBinsV2.svg')
+plot(plot_state_hhmv_1percents)# make plot
+dev.off()
+
+
+plot_state_hhmv_rollingmean <- 
+  ggplot(data= local_all_MMR, 
+         aes(x=PhaseByMVQuintile, 
+             y=MV.line.per.kwh.rollingmean,
+             #linetype = Scemario_name,
+             colour = Scenario_name)) +
+  geom_line(size =1) +
+  labs(title = "Moving Average [window=100] of MV Line", 
+       x = "Phases by Equal MV Quintile", 
+       y="MV Line per Household [m/HH]", 
+       colour = "Scenarios") +
+  blank_tl() +
+  #scale_colour_manual(values=cbPalette) +
+  scale_colour_manual(values=custom_colors) 
+plot_state_hhmv_rollingmean
+#Plot it
+ggsave(file="Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/master_merged/States_HHs_MVcosts_rollingMeanV1.pdf", plot=plot_state_hhmv_rollingmean)
+svg('Dropbox/Myanmar_GIS/Modeling/GAD&MIMU_Scenarios_docs/merged_tests/master_merged/States_HHs_MVcosts_rollingMeanV2.svg')
+plot(plot_state_hhmv_rollingmean)# make plot
+dev.off()
 
   
 #   scale_linetype_manual(values=c("dotdash", "dotted","dotdash", "dotted","longdash",
