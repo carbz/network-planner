@@ -85,11 +85,11 @@ comprehensive_plot <- function(polygon, proposed, existing, nodes, bounding_box)
       scale_linetype_manual(values=c("solid", "dotdash")) +
 
     geom_point(data=nodes, aes(x = X, y = Y, colour = Metric...System),
-               size = 6) +
+               size = 20) +
       geom_text(data=nodes, aes(x = X, y = Y,label=Name), 
-                size = 6, 
+                size = 20, 
                 fontface=3,
-                position=position_jitter(w = 0.01, h = 0.01),
+                position=position_jitter(w = 0.03, h = 0.03),
                 colour = "white",vjust = 0, hjust=0) + 
   
     #scale_shape_manual(values=c(20, 11), labels=c("BIG", "BPS")) +
@@ -173,7 +173,7 @@ existing_subset <- existing
   
   #Aspect Ratio: height to width
   aspect_ratio <- (max(nodes$Y)-min(nodes$Y))/(max(nodes$X)-min(nodes$X))
-  width <- 1500 #desired pixel width of image outputs
+  width <- 3500 #desired pixel width of image outputs
   
   png(filename=paste0(output_directory,
                       i,
@@ -196,9 +196,9 @@ blank_theme <- function() {
 }
 
 uglify_theme <- function() 
-  {theme(text=element_text(size=40),
-      legend.text = element_text(size=30),
-      axis.text = element_text(size=20),
+  {theme(text=element_text(size=80),
+      legend.text = element_text(size=60),
+      axis.text = element_text(size=50),
       axis.ticks=element_blank(), 
       panel.grid=element_blank(),
       panel.background=element_blank())
