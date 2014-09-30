@@ -2,7 +2,10 @@
 ##better way to convey results of NP quickly and repeatedly
 ##Written in NayPyiTaw, Myanmar in response to urgent response of Edwin to MOEP office here
 ##Date: 9-16-14
-
+#
+#helpful troubleshooting, performance increasing bits
+devtools::install_github("hadley/lineprof")
+library(lineprof)
 
 ##Drawing from past IDN work
 
@@ -30,6 +33,12 @@ MMR_polygon <- readShapePoly(
 MMR_polygon_twps <- readShapePoly(
   "~/Dropbox/Myanmar_GIS/Admin_Boundaries/5_adm3_townships1_250k_mimu/adm3_townships1_250k_mimu.shp")
 polygon <- MMR_polygon_twps
+  ##Prepare the polygon to be mapped by color
+  data <- data.frame(id=rownames(polygon@data), polygon@data, stringsAsFactors=F)
+  map.df <- fortify(polygon)
+  map.df <- join(map.df,data, by="id")
+  polygon <- map.df
+
 
 #3 Line Data from Existing Grid
 existing <- importShapefile(
@@ -43,7 +52,68 @@ proposed_attributes <- readShapeLines(
   "~/Desktop/MapboxShapefiles-MMR/networks-proposed-1000kWh.shp")
 
 #5Road and River Data later 
+MMR_roads <- readShapeLines(
+  "~/Dropbox/MMR-Training-docs/data/other_shapefiles/MMR_roads.shp")
+MMR_roads_prime <- subset(MMR_roads, F_CODE_DES=='Road') #pick out primary roads only
 
+#3-5 Load All Lines together
+
+##load.polylines <- function(directory_name) {
+  
+   lines_existing <- readShapeLines("~/Dropbox/Myanmar_GIS/Modeling/GAD-MIMU_Scenarios_docs/Mandalay/702/networks-existing")
+  lines_proposed <- readShapeLines("~/Desktop/MapboxShapefiles-MMR/networks-proposed-1000kWh")
+  MMR_roads <- readShapeLines(
+    "~/Dropbox/MMR-Training-docs/data/other_shapefiles/MMR_roads")
+  # change their IDs so they don't conflict
+  lines_existing <- spChFIDs(lines_existing, paste0('E.', lines_existing$FID))
+  lines_proposed <- spChFIDs(lines_proposed, paste0('P.', lines_proposed$SL_ID_1))
+  MMR_roads <- spChFIDs(MMR_roads, paste0('Roads.', row.names(MMR_roads)))
+  
+  # add a 'MVLineType' attribute
+  lines_existing$MVLineType <- "Existing"
+  lines_proposed$MVLineType <- lines_proposed$Phase_MV
+  MMR_roads$MVLineType <- MMR_roads$F_CODE_DES
+
+  
+  #Assess which fields are common between them
+  shared_col_names <- intersect(names(lines_existing),names(lines_proposed))
+  lines <- rbind(lines_existing[c(shared_col_names)], 
+                 lines_proposed[c(shared_col_names)])
+  lines <- rbind(lines[c(shared_col_names)], 
+                 MMR_roads[c(shared_col_names)])
+    
+#   #coerce to dataframes
+#   lines_existing <- fortify(lines_existing)
+#   lines_proposed <- fortify(lines_proposed)
+#   MMR_roads <- fortify(MMR_roads)
+#   
+#   lines_existing2 <- lines_existing
+#   lines_proposed2 <- lines_proposed
+#   MMR_roads2<- MMR_roads
+#   
+#   
+#   lines <- rbind(lines_existing[c(shared_col_names)], 
+#                  lines_proposed[c(shared_col_names)])
+#   lines <- rbind(lines, MMR_roads)
+#   lines <- rbind.fill(lines_proposed2, lines_existing2)
+#   lines <- rbind.fill(lines, MMR_roads2)
+  
+  #Develop ID field to map attributes to fortified shapeline 
+  lines@data$id <- rownames(lines@data)
+  lines2 <- join(fortify(lines, region="id"), lines@data, by = "id")
+lines2$X <- lines2$long
+lines2$Y <- lines2$lat
+
+#   #output the dataframe type file "lines"
+#   return(lines)
+#   
+# }
+
+
+
+#6 Road Data
+MMR_water <- readShapePoly(
+  "~/Dropbox/MMR-Training-docs/data/other_shapefiles/MMR_water_Areas.shp")
 
 ### Now Prep metrics_local per township ### 
 
@@ -60,47 +130,77 @@ table(metrics_local$Metric...System)
 dim(metrics_local)
 
 #unique townships to plot by
-twps <- unique(InMMR$TS_PCODE)
+twps <- unique(InMMR$TS_PCODE, na.rm=T)
+
 
 ##General Plot Function Defined ##
-comprehensive_plot <- function(polygon, proposed, existing, nodes, bounding_box) {
+comprehensive_plot <- function(polygon, proposed_subset, nodes, bounding_box, text) {
   
-  ggplot() + 
-    coord_equal(xlim=bounding_box[1:2],ylim=bounding_box[3:4])+
-    
-    geom_polygon(data = polygon, aes(x=long,y=lat, group=group), 
-                 colour="grey",
-                 size=2.5,
-                 alpha=1) +
-      scale_fill_brewer(type="seq") +
-    
-    geom_path(data=existing, 
-                aes(x=X, y=Y, group=PID), 
-                size=3, color='black') + 
-    
-    geom_path(data=proposed, 
-              aes(x=X, y=Y, group=PID), 
-              size=3, color='blue') + 
-      scale_size_manual(values=c(.5,1.5)) + 
-      scale_linetype_manual(values=c("solid", "dotdash")) +
-
-    geom_point(data=nodes, aes(x = X, y = Y, colour = Metric...System),
-               size = 20) +
-      geom_text(data=nodes, aes(x = X, y = Y,label=Name), 
-                size = 20, 
+    ggplot() + 
+      coord_equal(xlim=bounding_box[1:2],ylim=bounding_box[3:4])+
+      
+      guides(colour = guide_legend(keywidth = 5, keyheight = 3),
+             shape = guide_legend(override.aes = list(size=10),
+             size = guide_legend(override.aes = list(size=10)),
+             symbol = guide_legend(override.aes = list(size=10)))) + 
+      
+      labs(title = paste0("NEP Outputs: ",
+                          polygon[['TS']][i], ###!!!!!!!!!!!! Wrong way to name the chart. Must draw from nodes, not the polygon datai
+                          " Township"), 
+           x = "Longitude", y="Latitude", 
+           shape = 'Electrification Tech.')+ 
+           #color = "Electrification Tech.", linetype = "Settlement Data Source")+
+      
+      
+      geom_polygon(data = map.df, aes(x=long,y=lat, group=group, fill = ST), 
+                   colour="black",
+                   fill = 'gray',
+                   size=1.25,
+                   alpha=1) +
+       # scale_fill_grey()
+      
+      geom_polygon(data = MMR_water, aes(x=long,y=lat, group=group, colour = group), 
+                   colour="blue",
+                   size=0.5,
+                   fill='#7fcdbb',
+                   alpha=1) +
+      
+      geom_path(data=proposed_subset, 
+                aes(x=long, y=lat, group=group, colour = MVLineType, size = MVLineType)) + 
+        scale_color_manual(name = 'Line Type',
+                           values = c('#d7191c',
+                                      '#fdae61', 
+                                      '#ffffbf',
+                                      '#abdda4',
+                                      '#2b83ba',
+                                      '#ffffff', #Existing grid
+                                      '#dfc27d', #Trail
+                                      '#543005'),
+                           breaks=c('1','2','3','4','5','Existing','Road','Trail'),
+                           labels = c('Phase 1', 'Phase 2', 'Phase 3', 'Phase 4', 'Phase 5',
+                                      'Existing Grid', 
+                                      'Secondary Road', 'Primary Road')) + #ROAD 
+        scale_size_manual(name = 'Line Type',
+                          values =c(3,3,3,3,3, #proposed phases
+                                    8,#existing grid 
+                                   2,1),
+                          breaks=c('1','2','3','4','5','Existing','Road','Trail'),
+                          labels = c('Phase 1', 'Phase 2', 'Phase 3', 'Phase 4', 'Phase 5',
+                                     'Existing Grid', 
+                                     'Secondary Road', 'Primary Road')) +
+      geom_point(data=nodes, aes(x = X, y = Y, shape = Metric...System),
+                   size = 6, colour = '#000000') +
+      
+      geom_text(data=text, 
+                aes(x = X, y = Y,label=Name), 
+                size = 15, 
                 fontface=3,
                 position=position_jitter(w = 0.03, h = 0.03),
-                colour = "white",vjust = 0, hjust=0) + 
-  
-    #scale_shape_manual(values=c(20, 11), labels=c("BIG", "BPS")) +
-    #scale_color_manual(values = c("#2b83ba", "#d7191c", "#abdda4", "#ffffbf"), labels=c("Grid", "Mini Grid", "Off Grid", "Pre-electrified")) + 
-    labs(title = paste0("NEP Outputs: ",
-                        polygon[[6]][i],
-                        " Township"), 
-         x = "Longitude", y="Latitude", 
-         color = "Electrification Tech.", shape = "Settlement Data Source")+
-    #coord_map()
-    uglify_theme()
+                colour = "#404040",vjust = 0, hjust=0) + 
+      uglify_theme()
+
+}
+
 }
 
 
@@ -110,10 +210,10 @@ comprehensive_plot <- function(polygon, proposed, existing, nodes, bounding_box)
 polyline.within <- function(nodes, lines) {  
   test_lines <- lines
   
-  proposed_lines_subset <- (test_lines[ which((test_lines$X > min(nodes$X-2.0)) & 
-                                               (test_lines$X < max(nodes$X+2.0)) & 
-                                               (test_lines$Y > min(nodes$Y-2.0)) & 
-                                               (test_lines$Y < max(nodes$Y+2.0)) ),])
+  proposed_lines_subset <- (test_lines[ which((test_lines$X > min(nodes$X-3.0)) & 
+                                               (test_lines$X < max(nodes$X+3.0)) & 
+                                               (test_lines$Y > min(nodes$Y-3.0)) & 
+                                               (test_lines$Y < max(nodes$Y+3.0)) ),])
   return(proposed_lines_subset)
 }
 
@@ -126,12 +226,13 @@ polygon.bounds <- function(polygon, i) {
   
   twp <- subset(polygon,TS_PCODE==twps[i])
   
-  xy_polygon <- fortify(twp)
+  #xy_polygon <- fortify(twp)
+  xy_polygon <- twp
   
-  x_min <- min(xy_polygon[1])
-  x_max <- max(xy_polygon[1])
-  y_min <- min(xy_polygon[2])
-  y_max <- max(xy_polygon[2])
+  x_min <- min(xy_polygon['long'])
+  x_max <- max(xy_polygon['long'])
+  y_min <- min(xy_polygon['lat'])
+  y_max <- max(xy_polygon['lat'])
   
   xlim <- c(x_min, x_max)
   ylim <- c(y_min, y_max)
@@ -148,43 +249,50 @@ output_directory <- '~/Dropbox/Myanmar/6-FinalReport+Training/NPTMission/WorkFor
 i=1
 
 ##tripped up at i=27 ???, 50 seems to be okay
-for (i in 1:length(twps)){
+for (i in 218:length(twps)){
   
   nodes <- (subset(InMMR, TS_PCODE==twps[i]))
- 
-  proposed_subset <- polyline.within(nodes, proposed)  
-#   existing_subset <- polyline.within(nodes, existing)
-# 
-# proposed_subset <- proposed
-existing_subset <- existing
-
-
-  bounding_box <- polygon.bounds(polygon,i)
+  
+  lines_subset <- polyline.within(nodes, lines2)  
+  bounding_box <- polygon.bounds(map.df,i)
+  
+  #Text labels are subset of 
+  if (dim(nodes[which(nodes$Population >
+                                 mean(nodes$Population)),])[1] >2) {
+    text <- nodes[which(nodes$Population>
+                          mean(nodes$Population)),]
+    } else {
+    text <- nodes
+  }
   
   
-  twp_plot <- comprehensive_plot(MMR_polygon_twps,
-                                 proposed_subset,
-                                 existing_subset,
+  twp_plot <- comprehensive_plot(map.df,
+                                 lines2,
                                  nodes,
-                                 bounding_box)
+                                 bounding_box,
+                                 text)
   
   #Output
   #My favorite plot
   
-  #Aspect Ratio: height to width
+  #Aspect Ratio: height toi width
   aspect_ratio <- (max(nodes$Y)-min(nodes$Y))/(max(nodes$X)-min(nodes$X))
+  if (aspect_ratio == 'NaN' | aspect_ratio == 0){
+    aspect_ratio <- 1.0
+  }
+  
   width <- 3500 #desired pixel width of image outputs
   
   png(filename=paste0(output_directory,
                       i,
                       '-',
-                      polygon[[2]][i],
+                      nodes[['TS']][i],
                       '-',
-                      polygon[[6]][i],
-                      '.png'), width = width, height=width*aspect_ratio)
+                      nodes[['ST']][i],
+                      '-20140925.png'), width = width, height=width*aspect_ratio)
   plot(twp_plot)
   dev.off()
-}
+} 
 
 
 #Also establish a blank_theme template from Prabhas' recommendations 
@@ -192,7 +300,8 @@ blank_theme <- function() {
   theme(#axis.text=element_blank(), axis.title=element_blank(), 
     axis.ticks=element_blank(),
     panel.grid=element_blank(),
-    panel.background=element_blank())
+    panel.background=element_rect(fill= '#7fcdbb', colour = '#7fcdbb'),
+    plot.background=element_blank())
 }
 
 uglify_theme <- function() 
@@ -201,7 +310,8 @@ uglify_theme <- function()
       axis.text = element_text(size=50),
       axis.ticks=element_blank(), 
       panel.grid=element_blank(),
-      panel.background=element_blank())
+      panel.background=element_rect(fill= '#7fcdbb', colour = '#7fcdbb'),
+      plot.background=element_blank())
       #legend.position=c(1,1), #x=0=left, y=0=top
       #legend.justification=c(0,1))
 }
