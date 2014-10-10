@@ -70,8 +70,13 @@ for (i in 1:length(unique_files)){
   header4 <- as.data.frame(read.table(paste0('~/Dropbox/Nigeria-NEAP-GIS/shapefiling/sad_converted/sad_aa.csv'),
                                       sep = '|',#tabsep,
                                       stringsAsFactors = FALSE,
-                                      nrows = 7689,
+                                      #nrows = 7689,
                                       header = FALSE))
+  
+  badData <- as.data.frame(read.table(paste0('~/Dropbox/Nigeria-NEAP-GIS/shapefiling/sad_converted/sad_aa.csv'), 
+                                sep = '|',
+                                 nrows=1, 
+                                #skip=7690))
   
   
   #nrows = 100 #only want first row
