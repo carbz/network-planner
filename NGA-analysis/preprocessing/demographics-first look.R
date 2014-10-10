@@ -17,7 +17,7 @@
 #V16 = binary... (?) 
 
 #sample: nig <- read.csv('~/Downloads/sad_aa.csv')
-unique_files <- (list.files(path = '~/Dropbox/Nigeria-NEAP-GIS/Data from Eric -09292014/'))
+unique_files <- (list.files(path = '~/Dropbox/sad//'))
 
 headers <- as.data.frame(NULL)
 header <- as.data.frame(read.csv(paste0('~/Dropbox/sad/',unique_files[1]),
@@ -67,10 +67,10 @@ for (i in 1:length(unique_files)){
                                     sep = tabsep,
                                     stringsAsFactors = FALSE,
                                    header = FALSE))
-  header4 <- as.data.frame(read.table(paste0('~/Dropbox/sad/sad_ak_mod.csv'),
-                                      sep = tabsep,
+  header4 <- as.data.frame(read.table(paste0('~/Dropbox/Nigeria-NEAP-GIS/shapefiling/sad_converted/sad_aa.csv'),
+                                      sep = '|',#tabsep,
                                       stringsAsFactors = FALSE,
-                                      #nrows = 31339,
+                                      nrows = 7689,
                                       header = FALSE))
   
   
