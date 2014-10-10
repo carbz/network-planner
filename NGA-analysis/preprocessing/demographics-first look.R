@@ -1,5 +1,7 @@
 ## 9/29/14
 ##quickly scan the header rows of the NIG population data
+##final 2011 Voter registration dataset
+## perform mathematics on NIG populations
 
 #V1 = State
 #v2 = LGA
