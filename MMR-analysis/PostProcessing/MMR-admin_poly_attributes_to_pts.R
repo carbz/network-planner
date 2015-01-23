@@ -16,13 +16,13 @@ coordinates(pop_pts) = ~Longitude+Latitude
 #coordinates(pop_pts) = ~X+Y
                    
 ##3. INPUT Load in Admin shapefiles
-#states_path <- '/Users/carbz/Dropbox/Myanmar_GIS/Admin_Boundaries/3_adm1_states_regions2_250k_mimu/adm1_states_regions2_250k_mimu.shp'
-#States <- readShapePoly(states_path)
+states_path <- '/Users/carbz/Dropbox/Myanmar_GIS/Admin_Boundaries/3_adm1_states_regions2_250k_mimu/adm1_states_regions2_250k_mimu.shp'
+States <- readShapePoly(states_path) ##akin to Delhi sub-division
 
 twps_path <- '/Users/carbz/Dropbox/Myanmar_GIS/Admin_Boundaries/5_adm3_townships1_250k_mimu/adm3_townships1_250k_mimu.shp'
-Townships <- readShapePoly(twps_path)
+Townships <- readShapePoly(twps_path) ##akin to voronois
 
-##4. Which polygon are the pts inside the polygon?
+##4. Which polygon are the pts inside?
 # State_GIS <- over(pop_pts,MMR_polygon)
 Twps_GIS <- over(pop_pts, Townships)
 
