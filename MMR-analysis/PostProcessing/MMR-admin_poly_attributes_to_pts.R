@@ -28,8 +28,8 @@ Twps_GIS <- over(pop_pts, Townships)
 
 ##5. Assign Polygon attribute data to Points
 pop_pts$State_GIS=Twps_GIS$ST
-pop_pts$Districts_GIS=Twps_GIS$DT
-pop_pts$Townships_GIS=Twps_GIS$TS
+pop_pts$District_GIS=Twps_GIS$DT
+pop_pts$Township_GIS=Twps_GIS$TS
 
 ##6. OUTPUT: Write csv's now
 directory_name <- '~/Downloads/'
