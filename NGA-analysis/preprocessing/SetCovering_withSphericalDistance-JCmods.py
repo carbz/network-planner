@@ -124,7 +124,7 @@ def generateNodeDictFromShp(shapeFile,outputPath):
         y = geomRef.GetY()
         FID = feat.GetFID()
 
-        nameField= feat.GetFieldIndex("Cluster")
+        nameField= feat.GetFieldIndex("name")
         #weightField = feat.GetFieldIndex("Cluster")
         weightField = int(1)
 
@@ -278,7 +278,8 @@ def main(argv=None):
         try:
             #inputShapeFile = argv[1]
 
-            inputShapeFile=r'/Users/carbz/Dropbox/Nigeria-NEAP-GIS/Cluster_vs_PollingUnits_Analysis/Buf1/All_points.shp'
+            # inputShapeFile=r'/Users/carbz/Dropbox/Nigeria-NEAP-GIS/Cluster_vs_PollingUnits_Analysis/Buf1/All_points.shp'
+            inputShapeFile=r'/Users/carbz/Dropbox/Nigeria-NEAP-GIS/Cluster_vs_PollingUnits_Analysis/Buf1/All_points_final-corrected20150130.shp'
             #inputShapeFile=r"C:/Users/SSherpa/Dropbox/PapuaNewGuinea/GIS/CensusData/CollectedInPortMoresby-2013-07/FromWarrenAtNICTA/MAPINFO_VERSION 10.5/EA-Work/png2000_cu_point-Copy-99-EA.shp"
             outputDir =r'/Users/carbz/Dropbox/Nigeria-NEAP-GIS/Cluster_vs_PollingUnits_Analysis/Buf1/'
             #outputDir=r"C:/Users/SSherpa/Dropbox/PapuaNewGuinea/GIS/CensusData/CollectedInPortMoresby-2013-07/FromWarrenAtNICTA/MAPINFO_VERSION 10.5/SS-Work"
@@ -295,7 +296,7 @@ def main(argv=None):
         nodesByClusterID=generateClusterDicts(nodes,coverDist)
         #nodesByClusterID={1:[1,2,3,4],2:[2],3:[3,4],4:[3,4],5:[1,2,5,6],6:[6]}
         fieldnames = ['X', 'Y', 'Count', 'Pop', 'Settlements']# List of header fields
-        statsFile= outputDir + os.sep + "All_points-SetCoverCluster-20150130-500mBound.csv"
+        statsFile= outputDir + os.sep + "All_points-SetCoverCluster-20150202-500mBound.csv"
         csvWriter = csv.writer(open(statsFile, 'wb'))
         #Writing header row with column names to the csv output
         csvWriter.writerow(fieldnames)
