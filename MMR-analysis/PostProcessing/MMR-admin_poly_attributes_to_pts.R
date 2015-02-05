@@ -31,9 +31,22 @@ pop_pts$State_GIS=Twps_GIS$ST
 pop_pts$District_GIS=Twps_GIS$DT
 pop_pts$Township_GIS=Twps_GIS$TS
 
+##5a. For Joe Woo, pull Shahn only
+
+shahn <- c('Shan (North)','Shan (East)', 'Shan (South)')
+col_names <- c('Name', 'Township_GIS', 'District_GIS','State_GIS', 'Population')
+
+shahn_df <- pop_pts[which(pop_pts$State %in% shahn),
+                    col_names]
+#trim it up
+
 ##6. OUTPUT: Write csv's now
 directory_name <- '~/Downloads/'
 
 write.csv(pop_pts, paste0(directory_name,
                           'ALL_States_MMR_AllPopPlaces_Jan23-GeoOverlayAdmins.csv'),
+          row.names=F)
+
+write.csv(shahn_df, paste0(directory_name,
+                          'Shahn_States_all-MMR_PopPlaces_20150204.csv'),
           row.names=F)
