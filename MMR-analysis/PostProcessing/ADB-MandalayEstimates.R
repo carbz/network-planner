@@ -1,12 +1,12 @@
-#April 7, 2014
-#Vijay wants to wrap up core messages from IDN work in a Geospatial Overlay
+#Feb 5, 2015
+#ADB project requires specific look at Manadalay electrification needs data
 
 require(WriteXLS)
 require(ggplot2)
 require(plyr)
 
 
-##1. INPUT: We want to read in the population dataset
+##1. INPUT: read in the population dataset
 pop_path_name <-'~/Dropbox/Myanmar-ADB/07-Analysis//0-mandalay_data_subset/ForPanosV-NatlMl-LiteVarList.csv'
 pop_pts <- read.csv(pop_path_name)
 
@@ -31,11 +31,6 @@ pop_pts$District_GIS=Twps_GIS$DT
 pop_pts$Township_GIS=Twps_GIS$TS
 
 ##6. Making dataset Mandalay relevant 
-
-shahn <- c('Shan (North)','Shan (East)', 'Shan (South)')
-col_names <- c('Name', 
-               'Township_GIS', 'District_GIS','State_GIS', 'Population')
-
 
 col_names <- c('Village','Township_GIS', 'District_GIS','State_GIS', 
                'Population','ProjHHCount',
@@ -64,38 +59,51 @@ df <- mutate(df,
 
 #That lets us develop MV Phase bins
 df$Man.Phase.MV <- NA
+
+df$Man.MV_investment_per_HH_by_MVPhase.m <- NA
+
+
 total_phases <- 5
-phase_increment_grid <- sum(df$MVDistance)
+phase_increment_grid <- sum(df$MVDistance, na.rm=T)
 
 for (j in 1:total_phases){
   
   lower_cutoff <- (j-1)/total_phases*phase_increment_grid
   upper_cutoff <- j/total_phases*phase_increment_grid
   
+  ##Who are we talking about here
+    
   df$Man.Phase.MV[which((df$Man.CumulativeNetworkExtent.m >= lower_cutoff) &
                           (df$Man.CumulativeNetworkExtent.m <= upper_cutoff))] <- j
   
+  df$Man.MV_investment_per_HH.by_MVPhase.m_per_HH[which((df$Man.CumulativeNetworkExtent.m >= lower_cutoff) &
+                          (df$Man.CumulativeNetworkExtent.m <= upper_cutoff))]
+  
+  phase_hhs = sum(df$ProjHHCount[which(df$Man.Phase.MV==j)], na.rm=T)
+  phase_mv = sum(df$MVDistance[which(df$Man.Phase.MV==j)], na.rm=T)
+  
+  df$Man.MV_investment_per_HH_by_MVPhase.m[which(df$Man.Phase.MV==j)] <- phase_mv/phase_hhs
 }
 
-#That lets us develop Phase bins
+#That lets us develop HH Phase bins
 df$Man.Phase.HH <- NA
 total_phases <- 5
-phase_increment_grid <- sum(df$ProjHHCount)
+phase_increment_grid <- sum(df$ProjHHCount, na.rm=T)
 
 for (j in 1:total_phases){
   
   lower_cutoff <- (j-1)/total_phases*phase_increment_grid
   upper_cutoff <- j/total_phases*phase_increment_grid
   
-  df$Man.Phase.MV[which((df$Man.Phase.HH >= lower_cutoff) &
-                          (df$Man.Phase.HH <= upper_cutoff))] <- j
+  df$Man.Phase.HH[which((df$Man.CumulativeHousesConnected.qty >= lower_cutoff) &
+                          (df$Man.CumulativeHousesConnected.qty <= upper_cutoff))] <- j
   
 }
   
 
-##7. OUTPUT: Write csv's now
-directory_name <- '~/Dropbox/Myanmar-ADB/06-InceptionReport/'
+##7. OUTPUT: Write csv's to directory of choice 
+directory_name <- '~/Dropbox/Myanmar-ADB/07-Analysis//0-mandalay_data_subset/'
 
-write.csv(pop_pts, paste0(directory_name,
-                          'ALL_States_MMR_AllPopPlaces_Jan23-GeoOverlayAdmins.csv'),
+write.csv(df, paste0(directory_name,
+                          'Mandalay_AllPopPlaces_20150205.csv'),
           row.names=F)
