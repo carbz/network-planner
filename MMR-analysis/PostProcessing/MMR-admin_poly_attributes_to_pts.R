@@ -34,7 +34,14 @@ pop_pts$Township_GIS=Twps_GIS$TS
 ##5a. For Joe Woo, pull Shahn only
 
 shahn <- c('Shan (North)','Shan (East)', 'Shan (South)')
-col_names <- c('Name', 'Township_GIS', 'District_GIS','State_GIS', 'Population')
+col_names <- c('Name', 
+               'Village'',Township_GIS', 'District_GIS','State_GIS', 
+               'Population',
+               'Metric...System.x','LVLineLength',
+               'GridInternalInitialCost','GridExtrenalInitialCost',
+               'System..mini.grid....System.nodal.levelized.cost'
+               
+               )
 
 shahn_df <- pop_pts[which(pop_pts$State %in% shahn),
                     col_names]
