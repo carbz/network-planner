@@ -7,6 +7,8 @@ source('~/github/network-planner/Prioritized/Custom_Rollout_Functions.R')
 source('~/github/network-planner/IDN-analysis/PostProcessing/interpret_commonfunctions.R')
 source('~/github/network-planner/Prioritized/NP_rollout_common_functions.R')
 
+source('~/github/network-planner/NGA-analysis/postprocessing/NetworkPlanner_SystemRollout_Greedy.R')
+
 #Jonathan's Directory 
 # path_name <-"~/Dropbox/Nigeria-NEAP-GIS/Cluster_vs_PollingUnits_Analysis/Buf1/NPresults/Clustering-500m/"
 path_name <-"~/Dropbox/Nigeria-NEAP-GIS/Cluster_vs_PollingUnits_Analysis/Buf1/NPresults/"
