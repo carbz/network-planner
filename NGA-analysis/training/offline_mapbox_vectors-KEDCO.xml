@@ -1,0 +1,86 @@
+<GDAL_WMS>
+    
+    <Service name="TMS">
+        
+        <!--
+        <ServerUrl>file:///Users/carbz/Downloads/mapbox_vector_tiles/{zoom}/{x}/{y}.png</ServerUrl>
+         -->
+    <ServerUrl>http://tile.openstreetmap.org/${z}/${x}/${y}.png</ServerUrl>
+
+    </Service>
+    <DataWindow>
+        <UpperLeftX>619343</UpperLeftX>
+        <UpperLeftY>1564144</UpperLeftY>
+        <LowerRightX>1255460</LowerRightX>
+        <LowerRightY>941000</LowerRightY>
+        <TileLevel>17</TileLevel>
+        <TileCountX>1</TileCountX>
+        <TileCountY>1</TileCountY>
+        <YOrigin>top</YOrigin>
+    </DataWindow>
+    <Projection>EPSG:900913</Projection>
+    <BlockSizeX>256</BlockSizeX>
+    <BlockSizeY>256</BlockSizeY>
+    <BandsCount>3</BandsCount>
+    <Cache />
+    <OfflineMode>true</OfflineMode>
+    
+    
+</GDAL_WMS>
+
+
+<!--
+ 
+ EXAMPLE 1:http://www.3liz.com/blog/rldhont/index.php?post/2012/07/17/OpenStreetMap-Tiles-in-QGIS
+ <GDAL_WMS>
+    <Service name="TMS">
+        <ServerUrl>file:///E:/gis/tilesets/ortho/${z}/${x}/${y}.jpg</ServerUrl>
+        <SRS>EPSG:2193</SRS>
+        <ImageFormat>image/jpeg</ImageFormat>
+    </Service>
+    <DataWindow>
+        <UpperLeftX>1678531.2</UpperLeftX>
+        <LowerRightY>5636060.0</LowerRightY>
+        <LowerRightX>1703824.0</LowerRightX>
+        <UpperLeftY>5669442.4</UpperLeftY>
+        <TileLevel>9</TileLevel>
+        <YOrigin>bottom</YOrigin>
+        <SizeX>63232</SizeX>
+        <SizeY>83456</SizeY>
+        <TileCountX>247</TileCountX>
+        <TileCountY>326</TileCountY>
+    </DataWindow>
+    <Projection>EPSG:2193</Projection>
+    <BlockSizeX>256</BlockSizeX>
+    <BlockSizeY>256</BlockSizeY>
+    <BandsCount>3</BandsCount>
+</GDAL_WMS>
+ 
+ 
+
+ EXAMPLE 2: http://gis.stackexchange.com/questions/114901/gdal-tms-minidriver-in-qgis-problem-or-bug
+ <GDAL_WMS>
+ 
+ <Service name="TMS">
+ <ServerUrl>file:///Users/carbz/Downloads/mapbox_vector_tiles/{zoom}/{x}/{y}.png</ServerUrl>
+ <!--<ServerUrl>http://tile.openstreetmap.org/${z}/${x}/${y}.png</ServerUrl>
+ 
+</Service>
+<DataWindow>
+    <UpperLeftX>-20037508.34</UpperLeftX>
+    <UpperLeftY>20037508.34</UpperLeftY>
+    <LowerRightX>20037508.34</LowerRightX>
+    <LowerRightY>-20037508.34</LowerRightY>
+    <TileLevel>18</TileLevel>
+    <TileCountX>1</TileCountX>
+    <TileCountY>1</TileCountY>
+    <YOrigin>top</YOrigin>
+</DataWindow>
+<Projection>EPSG:900913</Projection>
+<BlockSizeX>256</BlockSizeX>
+<BlockSizeY>256</BlockSizeY>
+<BandsCount>3</BandsCount>
+<Cache />
+</GDAL_WMS>
+
+ -->
