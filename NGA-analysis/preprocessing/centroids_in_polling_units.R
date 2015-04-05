@@ -9,7 +9,9 @@
 require(WriteXLS)
 require(ggplot2)
 require(plyr)
-
+library(sp)
+library(rgdal)
+library(maptools)
 
 ##1. INPUT: read in the population dataset
 pts1_path <-'~/Dropbox/Nigeria-NEAP-GIS/Cluster_vs_PollingUnits_Analysis/Buf1/clustering-set_cover/aggregated-All_Points-SetCovering-search_radius_100m.csv'
@@ -29,8 +31,9 @@ pts <- rbind.fill(pts, pts3)
 coordinates(pts) = ~x_centroid+y_centroid
 
 ##3. INPUT Load in Polling Unit shapefiles
-states_path <- '/Users/carbz/Dropbox/Nigeria-NEAP-GIS/shapefiling/KanoPollingUnits-rural_only/KanoPollingUnits-rural_only-ALL-VoronoiBounds.shp'
-pus <- readShapePoly(states_path) ##akin to Delhi sub-division
+#pus_path <- '/Users/carbz/Dropbox/Nigeria-NEAP-GIS/shapefiling/KanoPollingUnits-rural_only/KanoPollingUnits-rural_only-ALL-VoronoiBounds.shp'
+pus_path <- '/Users/carbz/Dropbox/Nigeria-NEAP-GIS/Cluster_vs_PollingUnits_Analysis/Buf3/comparitive_np_scenarios/PU_mv-proposed-via_clustering+pu.shp'
+pus <- readShapePoly(pus_path) ##akin to Delhi sub-division
 #clean out jenky attributes
 pus$radius.km. <- NULL
 pus$radius.m. <- NULL
@@ -81,18 +84,49 @@ height = 1000
 
 #summarize by polling unit
 attach(df)
+
+
+
 polls <- ddply(df, .(df$PollingUni), summarize,
                Total_Voters.qty = max(Sum.of.reg),
                Compounds_100m_or_more.qty = sum(compounds_qty[which(compounds_qty==1)]),
                Total_Compouds.qty = sum(compounds_qty),
-               Polling_Unit_Area.m = max(Area_m),
+               Polling_Unit_Area.sqm = max(area_sqm),
                Total_LV_est.m = sum(mst_length_m, na.rm=T),
-               Average_LV_per_HH.m = mean(mst_length_per_compound_m)
-               )
+               Average_LV_per_HH.m = mean(mst_length_per_compound_m),
+               ##new stuff here
+               MV_required_per_PU.rads = max(length.pu),
+               MV_required_per_visual_inspection.rads = max(LENGTH),
+               VI_MV_per_HH = max(LENGTH)/(Total_Voters.qty*2/6),
+               PU_MV_per_HH = max(length.pu)/(Total_Voters.qty*2/6),
+               density_sqm = max(area_sqm)/max(Sum.of.reg)
+                )
 
-GGally::ggpairs(polls,
-                2:7,
+vars <- c("Total_Voters.qty","Compounds_100m_or_more.qty","Total_Compouds.qty","Polling_Unit_Area.sqm","Average_LV_per_HH.m",
+ "MV_required_per_PU.rads","MV_required_per_visual_inspection.rads")
+
+tags = c('Total Voterss','Isolated Communities [qty]','Total Clusters','ServiceArea.sqm','MID',
+         'MV per PUs [rads]', 'MV per Viz. Inspection [rads]')
+
+GGally::ggpairs(polls[vars],
                 title='Three Regions: Characterizing Polling Units',
-#                 columnLabels = tags,
+                columnLabels = tags,
                 alpha = 1)
 
+vars1 <- c("Total_Voters.qty","Total_Compouds.qty","Polling_Unit_Area.sqm",
+          "MV_required_per_PU.rads","MV_required_per_visual_inspection.rads", "MV_per_HH")
+
+tags1 = c('Total Voterss','Total Clusters','ServiceArea.sqm',
+         'PU-MV [dd]', 'Viz.Insp-MV [dd]', "MV per HH [dd]")
+
+vars2 <- c('density_sqm','VI_MV_per_HH','PU_MV_per_HH')
+
+GGally::ggpairs(polls[vars1],
+                title='Three Regions: Characterizing Polling Units',
+                columnLabels = tags1,
+                alpha = 1)
+
+GGally::ggpairs(polls[vars2],
+                title='Three Regions: Characterizing Polling Units',
+                #columnLabels = tags1,
+                alpha = 1)
