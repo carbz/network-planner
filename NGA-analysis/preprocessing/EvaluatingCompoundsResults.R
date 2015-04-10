@@ -8,7 +8,6 @@ pts2 <- read.csv(pts2_path)
 pts3 <- read.csv(pts3_path)
 
 #combine together
-library(plyr)
 pts_all <- rbind.fill(pts1, pts2)
 pts_all <- rbind.fill(pts_all, pts3)
 
@@ -49,9 +48,8 @@ pts_all$points_dis <- points_dis
 coordinates(data.frame(pts_all)) = ~x+y
 
 ##3. INPUT Load in Polling Unit shapefiles
-#pus_path <- '/Users/carbz/Dropbox/Nigeria-NEAP-GIS/shapefiling/KanoPollingUnits-rural_only/KanoPollingUnits-rural_only-ALL-VoronoiBounds.shp'
-pus_path <- '/Users/carbz/Dropbox/Nigeria-NEAP-GIS/Cluster_vs_PollingUnits_Analysis/Buf3/comparitive_np_scenarios/PU_mv-proposed-via_clustering+pu.shp'
-pus <- readShapePoly(pus_path) ##akin to Delhi sub-division
+states_path <- '/Users/carbz/Dropbox/Nigeria-NEAP-GIS/shapefiling/KanoPollingUnits-rural_only/KanoPollingUnits-rural_only-ALL-VoronoiBounds.shp'
+pus <- readShapePoly(states_path) ##akin to Delhi sub-division
 #clean out jenky attributes
 pus$radius.km. <- NULL
 pus$radius.m. <- NULL
