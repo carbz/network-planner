@@ -119,7 +119,7 @@ vars1 <- c("Total_Voters.qty","Total_Compouds.qty","Polling_Unit_Area.sqm",
 tags1 = c('Total Voterss','Total Clusters','ServiceArea.sqm',
          'PU-MV [dd]', 'Viz.Insp-MV [dd]', "MV per HH [dd]")
 
-vars2 <- c('density_sqm','VI_MV_per_HH','PU_MV_per_HH')
+vars2 <- c('density_sqm','VI_MV_per_HH','PU_MV_per_HH','Polling_Unit_Area.sqm')
 
 GGally::ggpairs(polls[vars1],
                 title='Three Regions: Characterizing Polling Units',
