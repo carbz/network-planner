@@ -45,7 +45,8 @@ pts <- merged
 
 ##3. INPUT Load in Polling Unit shapefiles
 #pus_path <- '/Users/carbz/Dropbox/Nigeria-NEAP-GIS/shapefiling/KanoPollingUnits-rural_only/KanoPollingUnits-rural_only-ALL-VoronoiBounds.shp'
-lga_path <- '/Users/carbz/Dropbox/Nigeria-NEAP-GIS/preprocessing/workspace/admin2-LGA-w_subsets/KEDCO_3_States_Kano_Katsina_Jigawa.shp'
+#lga_path <- '/Users/carbz/Dropbox/Nigeria-NEAP-GIS/preprocessing/workspace/admin2-LGA-w_subsets/KEDCO_3_States_Kano_Katsina_Jigawa.shp'
+lga_path <- '/Users/carbz/Dropbox/Nigeria-NEAP-GIS/preprocessing/workspace/admin2-LGA-w_subsets/KEDCO_3_States_Kano_Katsina_Jigawa-v2.shp'
 lgas <- readShapePoly(lga_path) ##akin to Delhi sub-division
 
 
