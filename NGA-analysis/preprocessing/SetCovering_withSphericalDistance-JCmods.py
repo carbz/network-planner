@@ -301,7 +301,7 @@ def main(argv=None):
         #Writing header row with column names to the csv output
         csvWriter.writerow(fieldnames)
         outFile = open(statsFile,"w")
-
+        
         while nodesByClusterID:
             namesInBiggestCluster=[]
             sumPopInBiggestCluster=0

@@ -48,12 +48,19 @@ proposed3 <- readShapeLines(paste0('~/Dropbox/Nigeria-NEAP-GIS/preprocessing/mod
 proposed4 <- readShapeLines(paste0('~/Dropbox/Nigeria-NEAP-GIS/preprocessing/modeling/760-KEDCO-Jigawa_HHDemand600-JOSM_lines/',
                                    '/networks-proposed.shp'))
 
-
+proposed <- NULL
 proposed <- combine.line.shapefiles(proposed1, proposed2)
 proposed <- combine.line.shapefiles(proposed, proposed3)
 proposed <- combine.line.shapefiles(proposed, proposed4)
 
 proposed$FID <- row.names(proposed) # ensure FID is unqiue
+
+#showing interim product
+writeLinesShape(proposed, 
+                paste0(path_name,directory_names[1],
+                       'networks-proposed-merged-20150415.shp'))
+#....
+
 
 proj4 <- read.csv(paste0(path_name,directory_names[1],"/metrics-local.csv"), nrows=1,header=FALSE) #RUNTIME ~ 00:28 mins
 
@@ -140,14 +147,14 @@ for (j in 1:total_phases){
 
 ##Output The Good stuff
 metrics_local_with_sequence <- (farsighted_grid[which(!(duplicated(farsighted_grid$id))),])
-proposed_with_rollout <- merge(proposed, metrics_local_with_sequence, by.x = "FID", by.y = "id")
+proposed_with_rollout <- merge(proposed["ID"], metrics_local_with_sequence, by.x = "ID", by.y = "id")
 writeLinesShape(proposed_with_rollout, 
                 paste0(path_name,directory_names[1],
                        'networks-proposed-with-rollout-20150415.shp'))
 
 write.csv(farsighted_grid, paste0(path_name,directory_names[1],
-                                        'metrics-local-grid-rollout_sequence-20150415.csv'))
-
+                                        'metrics-local-grid-rollout_sequence-20150415.csv'),
+          row.names=F)
 
 #output the flat csv files
 
@@ -157,13 +164,21 @@ standalones <- subset(local, Metric...System != 'grid')
 # standalones<-local
 names(standalones)[names(standalones) == 'X'] <- 'long'
 names(standalones)[names(standalones) == 'Y'] <- 'lat'
+standalones$Phase_MV <- standalones$Metric...System
+standalones$Phase_HH <- standalones$Metric...System
 
 shared_col_names <- intersect(names(standalones),names(farsighted_grid)) 
+standalones <- standalones[shared_col_names]
 
-local_all_nodes <- merge(farsighted_grid, standalones, by = shared_col_names, all=T)
+#local_all_nodes <- merge(farsighted_grid, standalones, by = shared_col_names, all=T)
+
+farsighted_grid$Phase_HH <- as.factor(farsighted_grid$Phase_HH)
+farsighted_grid$Phase_MV <- as.factor(farsighted_grid$Phase_MV)
+
 local_all_nodes <- rbind.fill(farsighted_grid, standalones)
-write.csv(proposed_with_rollout, paste0(path_name,directory_names[1],
-                                  'metrics-local-all-nodes-rollout_sequence-20150415.csv'))
+write.csv(local_all_nodes, paste0(path_name,directory_names[1],
+                                  'metrics-local-all-nodes-rollout_sequence-20150415.csv'),
+          row.names=F)
 
 #Inside 'Ayeyawady' State?
 library(maptools)

@@ -60,6 +60,23 @@ lga_fields <- c("LGA","STATE","POP_DENS","AREA_KM2",
 
 pts <- cbind(pts, lga_parent[lga_fields])
 
+##5B. INPUT Load in Polling Unit shapefiles
+pus_path <- '/Users/carbz/Dropbox/Nigeria-NEAP-GIS/Cluster_vs_PollingUnits_Analysis/clustered_polling_units/clustering-v2/Aggregated_PUs-SetCovering-search_radius_500m-poly.shp'
+pus_clustered <- readShapePoly(pus_path) ##akin to Delhi sub-division
+
+
+##4. Which polygon are the pts inside?
+# State_GIS <- over(pop_pts,MMR_polygon)
+lga_parent <- over(pts, lgas)
+
+##5. Assign Polygon attribute data to Points
+lga_fields <- c("LGA","STATE","POP_DENS","AREA_KM2",
+                "POP_2006","Subset_Reg")
+
+pts <- cbind(pts, lga_parent[lga_fields])
+
+
+
 
 #6 Assign demographic relationships...
 df <- data.frame(pts)
