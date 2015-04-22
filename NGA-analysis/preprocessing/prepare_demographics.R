@@ -64,10 +64,9 @@ pts <- cbind(pts, lga_parent[lga_fields])
 pus_path <- '/Users/carbz/Dropbox/Nigeria-NEAP-GIS/Cluster_vs_PollingUnits_Analysis/clustered_polling_units/clustering-v2/Aggregated_PUs-SetCovering-search_radius_500m-poly.shp'
 pus_clustered <- readShapePoly(pus_path) ##akin to Delhi sub-division
 
+##5C. Which polygon are the pts inside?
 
-##4. Which polygon are the pts inside?
-# State_GIS <- over(pop_pts,MMR_polygon)
-lga_parent <- over(pts, lgas)
+pus_clustered_parents <- over(pts, pus_clustered)
 
 ##5. Assign Polygon attribute data to Points
 lga_fields <- c("LGA","STATE","POP_DENS","AREA_KM2",
@@ -120,6 +119,16 @@ df$cum_HH_est = cumsum(df$pop/hhold_size*penetration_rate)
   
 df$KEDCO_connection <- 'Unlikely'
 df$KEDCO_connection[which(df$cum_HH_est<existing_connections)] <- 'Probable'
+
+#2008 NBS Survey
+df$State_Penetration_Rate_NBS2008 <- 0
+df$State_Penetration_Rate_NBS2008[which(df$STATE == 'Jigawa')] <- 41.6
+df$State_Penetration_Rate_NBS2008[which(df$STATE == 'Kano')] <- 42.6
+df$State_Penetration_Rate_NBS2008[which(df$STATE == 'Katsina')] <- 36.1
+
+
+
+
 
 df$tgt_ho_prt <- 1.0
 df$tgt_ho_prt[which(df$cum_HH_est<existing_connections)] <- 0.3

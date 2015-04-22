@@ -1,0 +1,15 @@
+{
+    "demand_nodes_file": "/Users/carbz/Dropbox/Nigeria-NEAP-GIS/preprocessing/demographics/AllKEDCO_500mSetCover_Clustered_PollingUnits_with_Pre_electrified_Pop_Reduced.csv",
+    "existing_networks": {
+         "filename": "data/leona/LeonaNetworksLL.shp",
+        "budget_value": 0,
+        "_comment":"filename /Users/carbz/Dropbox/Nigeria-NEAP-GIS/preprocessing/mv_lines/KEDCO-MV_lines-20150407-simplified/KEDCO-MV_lines-20150407.shp",
+    },
+
+    "network_algorithm": "mod_boruvka",
+    "network_parameters": {
+        "minimum_node_count": 100
+    },
+    "metric_model": "mvMax5",
+    "metric_model_parameters_file": "test/networkplanner_metric_params.json"
+}
