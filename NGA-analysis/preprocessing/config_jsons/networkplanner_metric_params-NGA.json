@@ -1,0 +1,30 @@
+{"demand (household)": 
+    { "household unit demand per household per year": 500}
+  }
+}
+
+{"demand (household)": 
+  {"demand curve points (population and multiplier)":"500.0 1.0; 1000.0 1.0; 5000.0 1.0; 10000.0 1.0",
+  "demand (household),household unit demand per household per year": 600.0,
+  "target household penetration rate": 1.0
+}
+"demand (peak)":
+{"peak demand as fraction of nodal demand occurring during peak hours (rural)":0.4,
+"peak demand as fraction of nodal demand occurring during peak hours (urban)":0.4,
+"demand (peak),peak electrical hours of operation per year":240.0
+}
+"demographics":
+{"mean household size (rural)":6.1,
+"mean household size (urban)":5.8,
+"mean interhousehold distance":25.0,
+"population growth rate per year (rural)":0.0,
+"population growth rate per year (urban)":0.0,
+"demographics,urban population threshold":5000
+}
+{"distribution":
+{"low voltage line cost per meter":14.0.,
+"low voltage line equipment cost per connection":288.0,
+"low voltage line equipment operations and maintenance cost as fraction of equipment cost":0.01,
+"low voltage line lifetime":20.0,
+"low voltage line operations and maintenance cost per year as fraction of line cost": 0.01}
+
