@@ -1,7 +1,7 @@
 {
-    "demand_nodes_file": "/Users/carbz/Dropbox/Nigeria-NEAP-GIS/preprocessing/demographics/AllKEDCO_500mSetCover_Clustered_PollingUnits_with_Pre_electrified_Pop_Reduced.csv",
+    "demand_nodes_file": "/Users/carbz/Dropbox/Nigeria-NEAP-GIS/preprocessing/modeling/tests/demographics_input.csv",
     "existing_networks": {
-         "filename": "/Users/carbz/Dropbox/Nigeria-NEAP-GIS/DataFromKEDCO/MVLineData/MAP_OF_KEDCO_DISTRIBUTION_NETWORK_georeferenced.tif/KEDCO_MV_Lines.shp",
+        "filename": "/Users/carbz/Dropbox/Nigeria-NEAP-GIS/preprocessing/mv_lines/networks-crude/existing networks/Kedco_MV.shp",
         "budget_value": 0
     },
 
