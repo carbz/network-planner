@@ -52,3 +52,7 @@ for (i in 1:length(regions)){
 
 demand_nodes_file <- "/Users/carbz/Dropbox/Nigeria-NEAP-GIS/preprocessing/demographics/AllKEDCO_500mSetCover_Clustered_PollingUnits_with_Pre_electrified_Pop_Reduced.csv"
 
+
+"/Users/carbz/github/network-planner/NGA-analysis/preprocessing/config_jsons/networkplanner_metric_params-NGA.json"
+
+"/Users/carbz/github/networker/test/networkplanner_metric_params.json"
