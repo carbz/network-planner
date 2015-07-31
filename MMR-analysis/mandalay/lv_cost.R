@@ -1,5 +1,5 @@
 # Original author: Chris Natali
-# adopted by carbz
+# adapted by carbz
 
 # Estimating the cost of an LV Network for a set of Households
 # This example is related to the networkplanner library and uses minor functions from it, but is more broad than the library as it demonstrates the utility of igraph and SP packages as well.
