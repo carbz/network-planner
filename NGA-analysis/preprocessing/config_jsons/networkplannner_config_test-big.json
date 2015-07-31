@@ -1,0 +1,13 @@
+{
+    "demand_nodes_file": "/Users/carbz/Dropbox/Nigeria-NEAP-GIS/preprocessing/modeling/tests/modelrunner/release_0_1_0-big_testing/demographics_input.csv",
+
+    "network_algorithm": "mod_boruvka",
+    "network_parameters": {
+        "minimum_node_count": 2
+    },
+    "metric_model": "mvMax5",
+    "metric_model_parameters_file": "/Users/carbz/github/network-planner/NGA-analysis/preprocessing/config_jsons/networkplanner_metric_params-NGA.json",
+
+    "header_type":"section_option"
+
+}
